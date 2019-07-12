@@ -24,6 +24,7 @@
 #ifndef OPENVPN_CRYPTO_CRYPTODC_H
 #define OPENVPN_CRYPTO_CRYPTODC_H
 
+#include <iostream>
 #include <utility> // for std::move
 #include <cstdint> // for std::uint32_t, etc.
 
@@ -135,7 +136,8 @@ namespace openvpn {
     CryptoDCSettings()
       : cipher_(CryptoAlgs::NONE),
 	digest_(CryptoAlgs::NONE),
-	dirty(false)
+	dirty(false),
+    ncp_enabled_(true)
     {
     }
 
@@ -144,6 +146,7 @@ namespace openvpn {
       factory_ = factory;
       context_.reset();
       dirty = false;
+      ncp_enabled_ = true;
     }
 
     void set_cipher(const CryptoAlgs::Type cipher)
@@ -164,6 +167,11 @@ namespace openvpn {
 	}
     }
 
+    void set_ncp_enabled(const bool enabled)
+    {
+        ncp_enabled_ = enabled;
+    }
+
     CryptoDCContext& context()
     {
       if (!context_ || dirty)
@@ -181,10 +189,16 @@ namespace openvpn {
       factory_.reset();
       context_.reset();
       dirty = false;
+      ncp_enabled_ = true;
     }
 
     CryptoAlgs::Type cipher() const { return cipher_; }
     CryptoAlgs::Type digest() const { return digest_; }
+    
+    bool ncp_enabled() const
+    {
+        return ncp_enabled_;
+    }
 
     CryptoDCFactory::Ptr factory() const { return factory_; }
 
@@ -194,6 +208,7 @@ namespace openvpn {
     CryptoDCFactory::Ptr factory_;
     CryptoDCContext::Ptr context_;
     bool dirty;
+    bool ncp_enabled_;
   };
 }
 

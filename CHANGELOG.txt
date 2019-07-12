@@ -1,0 +1,5 @@
+Changelog 3.3 AirVPN - Release date: 13 July 2019 by ProMIND
+
+- [ProMIND] [2019/06/02] Forked master openvpn3 repository 3.2 (qa:d87f5bbc04)
+- [ProMIND] [2019/06/06] Implemented CHACHA20-POLY1305 cipher for both control and data channels
+- [ProMIND] {2019/07/10] Implemented ncp-disable profile option

@@ -424,6 +424,13 @@ namespace openvpn {
 	  }
 	  dc.set_cipher(cipher);
 	  dc.set_digest(digest);
+      
+      const Option* ncp_disable = opt.get_ptr("ncp-disable");
+      
+      if(!ncp_disable)
+          dc.set_ncp_enabled(true);
+      else
+          dc.set_ncp_enabled(false);
 
 	  // tls-auth
 	  {
@@ -694,6 +701,16 @@ namespace openvpn {
 	os << "PROTOCOL OPTIONS:" << std::endl;
 	os << "  cipher: " << CryptoAlgs::name(dc.cipher()) << std::endl;
 	os << "  digest: " << CryptoAlgs::name(dc.digest()) << std::endl;
+
+    os << "  ncp enabled: ";
+    
+    if(dc.ncp_enabled())
+        os << "yes";
+    else
+        os << "no";
+    
+    os << std::endl;
+
 	os << "  compress: " << comp_ctx.str() << std::endl;
 	os << "  peer ID: " << remote_peer_id << std::endl;
 	return os.str();
@@ -812,15 +829,20 @@ namespace openvpn {
 	  out << "IV_SSO=" << sso_methods << '\n';
 	out << "IV_VER=" << OPENVPN_VERSION << '\n';
 	out << "IV_PLAT=" << platform_name() << '\n';
-	if (!force_aes_cbc_ciphersuites)
-	  {
-	    out << "IV_NCP=2\n"; // negotiable crypto parameters V2
-	    out << "IV_TCPNL=1\n"; // supports TCP non-linear packet ID
-	    out << "IV_PROTO=2\n"; // supports op32 and P_DATA_V2
-	    compstr = comp_ctx.peer_info_string();
-	  }
+
+    if(!force_aes_cbc_ciphersuites)
+    {
+        if(dc.ncp_enabled())
+            out << "IV_NCP=2\n"; // negotiable crypto parameters V2
+
+        out << "IV_TCPNL=1\n"; // supports TCP non-linear packet ID
+        out << "IV_PROTO=2\n"; // supports op32 and P_DATA_V2
+
+        compstr = comp_ctx.peer_info_string();
+    }
 	else
-	  compstr = comp_ctx.peer_info_string_v1();
+        compstr = comp_ctx.peer_info_string_v1();
+
 	if (compstr)
 	  out << compstr;
 	if (extra_peer_info)
