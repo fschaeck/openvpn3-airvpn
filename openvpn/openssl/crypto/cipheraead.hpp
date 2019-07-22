@@ -334,6 +334,7 @@ namespace openvpn
                 if(initialized)
                 {
                     EVP_CIPHER_CTX_cleanup(ctx);
+	                EVP_CIPHER_CTX_free(ctx);
 
                     initialized = false;
                 }
@@ -341,8 +342,10 @@ namespace openvpn
 
             void check_initialized() const
             {
+#ifdef OPENVPN_ENABLE_ASSERT
                 if(unlikely(!initialized))
                     throw openssl_aead_error("uninitialized");
+#endif
             }
         };
     }

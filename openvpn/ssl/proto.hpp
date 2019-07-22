@@ -424,13 +424,17 @@ namespace openvpn {
 	  }
 	  dc.set_cipher(cipher);
 	  dc.set_digest(digest);
-      
+
       const Option* ncp_disable = opt.get_ptr("ncp-disable");
-      
+
       if(!ncp_disable)
+      {
           dc.set_ncp_enabled(true);
+      }
       else
+      {
           dc.set_ncp_enabled(false);
+      }
 
 	  // tls-auth
 	  {
@@ -703,12 +707,12 @@ namespace openvpn {
 	os << "  digest: " << CryptoAlgs::name(dc.digest()) << std::endl;
 
     os << "  ncp enabled: ";
-    
+
     if(dc.ncp_enabled())
         os << "yes";
     else
         os << "no";
-    
+
     os << std::endl;
 
 	os << "  compress: " << comp_ctx.str() << std::endl;
