@@ -22,31 +22,29 @@
 #pragma once
 
 #include <string>
-#include <memory>
-
-#include <openvpn/ssl/sslapi.hpp>
-#include <openvpn/ssl/sni_metadata.hpp>
+#include <signal.h>
 
 namespace openvpn {
-  namespace SNI {
 
-    // Abstract base class used to provide an SNI handler
-    class HandlerBase
-    {
-    public:
-      typedef std::unique_ptr<HandlerBase> UPtr;
-
-      // Return a new SSLFactoryAPI for this SNI name.
-      // Implementation may also set sni_metadata.
-      // Return SSLFactoryAPI::Ptr() if sni_name is not recognized.
-      // The caller guarantees that sni_name is valid UTF-8 and
-      // doesn't contain any control characters.
-      virtual SSLFactoryAPI::Ptr sni_hello(const std::string& sni_name,
-					   SNI::Metadata::UPtr& sni_metadata,
-					   SSLConfigAPI::Ptr default_factory) const = 0;
-
-      virtual ~HandlerBase() {}
-    };
-
+  inline std::string signal_name(const int signum)
+  {
+    switch (signum)
+      {
+      case SIGINT:
+	return "SIGINT";
+      case SIGTERM:
+	return "SIGTERM";
+      case SIGHUP:
+	return "SIGHUP";
+      case SIGUSR1:
+	return "SIGUSR1";
+      case SIGUSR2:
+	return "SIGUSR2";
+      case SIGPIPE:
+	return "SIGPIPE";
+      default:
+	return std::to_string(signum);
+      }
   }
+
 }

@@ -309,6 +309,13 @@ namespace openvpn {
 
       synchronous_dns_lookup = config.synchronous_dns_lookup;
 
+#ifdef OPENVPN_TLS_LINK
+      if (opt.exists("tls-ca"))
+	{
+	  tls_ca = opt.cat("tls-ca");
+	}
+#endif
+
       // init transport config
       const std::string session_name = load_transport_config();
 
@@ -425,7 +432,7 @@ namespace openvpn {
 	    tunconf->frame = frame;
 	    tunconf->stats = cli_stats;
 	    tunconf->stop = config.stop;
-	    tunconf->wintun = config.wintun;
+	    tunconf->set_wintun(config.wintun);
 	    if (config.tun_persist)
 	    {
 	      tunconf->tun_persist.reset(new TunWin::TunPersist(true, false, nullptr));
@@ -827,6 +834,7 @@ namespace openvpn {
 #ifdef OPENVPN_TLS_LINK
 	      if (transport_protocol.is_tls())
 		tcpconf->use_tls = true;
+	      tcpconf->tls_ca = tls_ca;
 #endif
 #ifdef OPENVPN_GREMLIN
 	      tcpconf->gremlin_config = gremlin_config;
@@ -883,6 +891,9 @@ namespace openvpn {
     DCO::Ptr dco;
 #ifdef OPENVPN_EXTERNAL_TRANSPORT_FACTORY
     ExternalTransport::Factory* extern_transport_factory;
+#endif
+#ifdef OPENVPN_TLS_LINK
+    std::string tls_ca;
 #endif
   };
 }

@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2019 OpenVPN Inc.
+//    Copyright (C) 2012-2017 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -21,32 +21,20 @@
 
 #pragma once
 
-#include <string>
-#include <memory>
+// seed OpenSSL's random number generator with /dev/urandom
 
-#include <openvpn/ssl/sslapi.hpp>
-#include <openvpn/ssl/sni_metadata.hpp>
+#include <openssl/rand.h>
+
+#include <openvpn/random/devurand.hpp>
 
 namespace openvpn {
-  namespace SNI {
+  inline void openssl_reseed_rng()
+  {
+    unsigned char entropy[64];
 
-    // Abstract base class used to provide an SNI handler
-    class HandlerBase
-    {
-    public:
-      typedef std::unique_ptr<HandlerBase> UPtr;
+    RandomAPI::Ptr rng(new DevURand);
+    rng->rand_bytes(entropy, sizeof(entropy));
 
-      // Return a new SSLFactoryAPI for this SNI name.
-      // Implementation may also set sni_metadata.
-      // Return SSLFactoryAPI::Ptr() if sni_name is not recognized.
-      // The caller guarantees that sni_name is valid UTF-8 and
-      // doesn't contain any control characters.
-      virtual SSLFactoryAPI::Ptr sni_hello(const std::string& sni_name,
-					   SNI::Metadata::UPtr& sni_metadata,
-					   SSLConfigAPI::Ptr default_factory) const = 0;
-
-      virtual ~HandlerBase() {}
-    };
-
+    RAND_seed(entropy, sizeof(entropy));
   }
 }
