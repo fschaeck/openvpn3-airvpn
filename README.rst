@@ -6,7 +6,11 @@ OpenVPN 3 AirVPN is a direct fork of the official master project (https://github
 * CHACHA20-POLY1305 cipher for both control and data channels
 * ncp-disable directive
 
-This fork is maintained by AirVPN (https://airvpn.org) and it is used in Eddie for Android edition app available at https://play.google.com/store/apps/details?id=org.airvpn.eddie (direct link for sideloading the apk file can be found in AirVPN forum "News and Announcement" section https://airvpn.org/forums/forum/9-news-and-announcement/ Please note OpenVPN 3 AirVPN is used in Eddie for Android 2.4 or above)
+This fork is maintained by AirVPN (https://airvpn.org) and it is used in Eddie for Android edition app available at https://play.google.com/store/apps/details?id=org.airvpn.eddie
+
+Direct link for sideloading the apk file can be found in AirVPN forum "News and Announcement" section https://airvpn.org/forums/forum/9-news-and-announcement/
+
+Please note OpenVPN 3 AirVPN is used in Eddie for Android 2.4 or above
 
 -------
 
