@@ -1,7 +1,7 @@
 OpenVPN 3 AirVPN
 ================
 
-OpenVPN 3 AirVPN is a direct fork of the official master project (https://github.com/OpenVPN/openvpn3-airvpn) with these extra features:
+OpenVPN 3 AirVPN is a direct fork of the official master project (https://github.com/OpenVPN/openvpn3) with these extra features:
 
 * CHACHA20-POLY1305 cipher for both control and data channels
 * ncp-disable option (OpenVPN profile only)
