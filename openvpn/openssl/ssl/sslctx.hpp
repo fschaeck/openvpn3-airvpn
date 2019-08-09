@@ -33,6 +33,8 @@
 #include <openssl/ssl.h>
 #include <openssl/x509v3.h>
 #include <openssl/rsa.h>
+#include <openssl/dsa.h>
+#include <openssl/bn.h>
 #include <openssl/rand.h>
 
 #include <openvpn/common/size.hpp>
@@ -1156,7 +1158,7 @@ namespace openvpn {
 	      // server-side SNI
 	      if (config->sni_handler)
 		{
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
 #define OPENSSL_SERVER_SNI
 		  SSL_CTX_set_client_hello_cb(ctx, client_hello_callback, nullptr);
 #else
@@ -1968,7 +1970,7 @@ namespace openvpn {
       return true;
     }
 
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
 
     static int client_hello_callback(::SSL *s, int *al, void *)
     {
