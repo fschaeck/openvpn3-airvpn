@@ -98,7 +98,7 @@ namespace openvpn
 	
                 ctx = EVP_CIPHER_CTX_new();
 	
-                EVP_CIPHER_CTX_init(ctx);
+                EVP_CIPHER_CTX_reset(ctx);
 	
                 switch(mode)
                 {
