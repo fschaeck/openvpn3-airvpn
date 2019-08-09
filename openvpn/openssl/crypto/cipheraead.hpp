@@ -333,7 +333,6 @@ namespace openvpn
             {
                 if(initialized)
                 {
-                    EVP_CIPHER_CTX_cleanup(ctx);
 	                EVP_CIPHER_CTX_free(ctx);
 
                     initialized = false;
