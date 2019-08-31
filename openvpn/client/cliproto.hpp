@@ -122,6 +122,7 @@ namespace openvpn {
 
 	ProtoConfig::Ptr proto_context_config;
 	ProtoContextOptions::Ptr proto_context_options;
+    CryptoAlgs::Type cipher = CryptoAlgs::Type::NONE;
 	PushOptionsBase::Ptr push_base;
 	TransportClientFactory::Ptr transport_factory;
 	TunClientFactory::Ptr tun_factory;
@@ -131,6 +132,7 @@ namespace openvpn {
 	OptionList::Limits pushed_options_limit;
 	OptionList::FilterBase::Ptr pushed_options_filter;
 	unsigned int tcp_queue_limit = 0;
+    bool ncp_disable = false;
 	bool echo = false;
 	bool info = false;
 	bool autologin_sessions = false;
@@ -150,8 +152,10 @@ namespace openvpn {
 	  received_options(config.push_base),
 	  creds(config.creds),
 	  proto_context_options(config.proto_context_options),
+      cipher(config.cipher),
 	  cli_stats(config.cli_stats),
 	  cli_events(config.cli_events),
+      ncp_disable(config.ncp_disable),
 	  echo(config.echo),
 	  info(config.info),
 	  autologin_sessions(config.autologin_sessions),
@@ -456,6 +460,8 @@ namespace openvpn {
 	try {
 	  OPENVPN_LOG("Connecting to " << server_endpoint_render());
 	  Base::set_protocol(transport->transport_protocol());
+	  Base::set_cipher(cipher);
+	  Base::set_ncp_disable(ncp_disable);
 	  Base::start();
 	  Base::flush(true);
 	  set_housekeeping_timer();
@@ -995,6 +1001,7 @@ namespace openvpn {
 	if (notify_callback)
 	  {
 	    OPENVPN_LOG("Client exception in " << method_name << ": " << e.what());
+
 	    stop(true);
 	  }
 	else
@@ -1088,6 +1095,8 @@ namespace openvpn {
 
       ProtoContextOptions::Ptr proto_context_options;
 
+      CryptoAlgs::Type cipher = CryptoAlgs::Type::NONE;
+
       bool first_packet_received_ = false;
       bool sent_push_request = false;
       bool auth_pending = false;
@@ -1097,6 +1106,7 @@ namespace openvpn {
 
       ClientEvent::Connected::Ptr connected_;
 
+      bool ncp_disable;
       bool echo;
       bool info;
       bool autologin_sessions;

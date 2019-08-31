@@ -28,6 +28,7 @@
 #include <atomic>
 
 #include <openvpn/io/io.hpp>
+#include <openvpn/crypto/cryptoalgs.hpp>
 
 // Set up export of our public interface unless
 // OPENVPN_CORE_API_VISIBILITY_HIDDEN is defined
@@ -419,8 +420,10 @@ namespace openvpn {
 	std::string server_override;
 	std::string port_override;
 	Protocol proto_override;
+    CryptoAlgs::Type cipher_override;
 	IPv6Setting ipv6;
 	int conn_timeout = 0;
+	bool ncp_disable = false;
 	bool tun_persist = false;
 	bool wintun = false;
 	bool google_dns_fallback = false;
@@ -613,6 +616,14 @@ namespace openvpn {
 	if (!config.protoOverride.empty())
 	  Protocol::parse(config.protoOverride, Protocol::NO_SUFFIX);
 
+    // validate cipher_override
+    if(!config.cipherOverride.empty())
+    {
+        CryptoAlgs::lookup(config.cipherOverride);
+
+        OPENVPN_LOG("CIPHER OVERRIDE: " << CryptoAlgs::lookup(config.cipherOverride));
+    }  
+
 	// validate IPv6 setting
 	if (!config.ipv6.empty())
 	  IPv6Setting::parse(config.ipv6);
@@ -676,6 +687,14 @@ namespace openvpn {
 	state->private_key_password = config.privateKeyPassword;
 	if (!config.protoOverride.empty())
 	  state->proto_override = Protocol::parse(config.protoOverride, Protocol::NO_SUFFIX);
+
+    {
+        if(!config.cipherOverride.empty())
+            state->cipher_override = CryptoAlgs::lookup(config.cipherOverride);
+        else
+            state->cipher_override = CryptoAlgs::Type::NONE;
+    }
+
 	if (!config.ipv6.empty())
 	  state->ipv6 = IPv6Setting::parse(config.ipv6);
 	if (!config.compressionMode.empty())
@@ -692,6 +711,7 @@ namespace openvpn {
 	state->gui_version = config.guiVersion;
 	state->sso_methods = config.ssoMethods;
 	state->alt_proxy = config.altProxy;
+	state->ncp_disable = config.disableNCP;
 	state->dco = config.dco;
 	state->echo = config.echo;
 	state->info = config.info;
@@ -939,6 +959,7 @@ namespace openvpn {
       cc.server_override = state->server_override;
       cc.port_override = state->port_override;
       cc.proto_override = state->proto_override;
+      cc.cipher_override = state->cipher_override;
       cc.ipv6 = state->ipv6;
       cc.conn_timeout = state->conn_timeout;
       cc.tun_persist = state->tun_persist;
@@ -950,6 +971,7 @@ namespace openvpn {
       cc.proto_context_options = state->proto_context_options;
       cc.http_proxy_options = state->http_proxy_options;
       cc.alt_proxy = state->alt_proxy;
+      cc.ncp_disable = state->ncp_disable;
       cc.dco = state->dco;
       cc.echo = state->echo;
       cc.info = state->info;

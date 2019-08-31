@@ -55,6 +55,7 @@
 #include <openvpn/client/cliopthelper.hpp>
 #include <openvpn/client/optfilt.hpp>
 #include <openvpn/client/clilife.hpp>
+#include <openvpn/crypto/cryptoalgs.hpp>
 
 #include <openvpn/ssl/sslchoose.hpp>
 
@@ -124,6 +125,7 @@ namespace openvpn {
       std::string server_override;
       std::string port_override;
       Protocol proto_override;
+      CryptoAlgs::Type cipher_override = CryptoAlgs::Type::NONE;
       IPv6Setting ipv6;
       int conn_timeout = 0;
       SessionStats::Ptr cli_stats;
@@ -132,6 +134,7 @@ namespace openvpn {
       HTTPProxyTransport::Options::Ptr http_proxy_options;
       bool alt_proxy = false;
       bool dco = false;
+      bool ncp_disable = false;
       bool echo = false;
       bool info = false;
       bool tun_persist = false;
@@ -184,6 +187,7 @@ namespace openvpn {
 	server_override(config.server_override),
 	port_override(config.port_override),
 	proto_override(config.proto_override),
+	cipher_override(config.cipher_override),
 	conn_timeout_(config.conn_timeout),
 	tcp_queue_limit(64),
 	proto_context_options(config.proto_context_options),
@@ -191,6 +195,7 @@ namespace openvpn {
 #ifdef OPENVPN_GREMLIN
 	gremlin_config(config.gremlin_config),
 #endif
+    ncp_disable(config.ncp_disable),
 	echo(config.echo),
 	info(config.info),
 	autologin(false),
@@ -591,6 +596,7 @@ namespace openvpn {
       cli_config->proto_context_config.reset(new Client::ProtoConfig(proto_config_cached(relay_mode)));
 
       cli_config->proto_context_options = proto_context_options;
+      cli_config->cipher = cipher_override;
       cli_config->push_base = push_base;
       cli_config->transport_factory = transport_factory;
       cli_config->tun_factory = tun_factory;
@@ -599,6 +605,7 @@ namespace openvpn {
       cli_config->creds = creds;
       cli_config->pushed_options_filter = pushed_options_filter;
       cli_config->tcp_queue_limit = tcp_queue_limit;
+      cli_config->ncp_disable = ncp_disable;
       cli_config->echo = echo;
       cli_config->info = info;
       cli_config->autologin_sessions = autologin_sessions;
@@ -868,6 +875,7 @@ namespace openvpn {
     std::string server_override;
     std::string port_override;
     Protocol proto_override;
+    CryptoAlgs::Type cipher_override = CryptoAlgs::Type::NONE;
     int conn_timeout_;
     unsigned int tcp_queue_limit;
     ProtoContextOptions::Ptr proto_context_options;
@@ -876,6 +884,7 @@ namespace openvpn {
     Gremlin::Config::Ptr gremlin_config;
 #endif
     std::string userlocked_username;
+    bool ncp_disable;
     bool echo;
     bool info;
     bool autologin;

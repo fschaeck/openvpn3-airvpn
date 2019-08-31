@@ -1,3 +1,12 @@
+Changelog 3.3.1 AirVPN - Release date: 31 August 2019 by ProMIND
+
+- [ProMIND] [2019/08/06] Added cipher override to client configuration
+- [ProMIND] [2019/08/06] Added ncp disable override to client configuration
+
+
+*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+
 Changelog 3.3 AirVPN - Release date: 13 July 2019 by ProMIND
 
 - [ProMIND] [2019/06/02] Forked master openvpn3 repository 3.2 (qa:d87f5bbc04)

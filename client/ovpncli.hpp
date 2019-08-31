@@ -189,6 +189,10 @@ namespace openvpn {
       // Should be tcp, udp, or adaptive.
       std::string protoOverride;
 
+      // Force a given cipher alrorithm
+      // Must be one of CryptoAlgs::Type (string)
+      std::string cipherOverride;
+
       // IPv6 preference
       //  no      -- disable IPv6, so tunnel will be IPv4-only
       //  yes     -- request combined IPv4/IPv6 tunnel
@@ -197,6 +201,9 @@ namespace openvpn {
 
       // Connection timeout in seconds, or 0 to retry indefinitely
       int connTimeout = 0;
+
+      // If true, disables negotiable crypto parameters
+      bool disableNCP = false;
 
       // Keep tun interface active during pauses or reconnections
       bool tunPersist = false;

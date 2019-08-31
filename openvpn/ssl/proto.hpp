@@ -293,6 +293,9 @@ namespace openvpn {
       // Transport protocol, i.e. UDPv4, etc.
       Protocol protocol; // set with set_protocol()
 
+      // Cipher algorithm
+      CryptoAlgs::Type user_selected_cipher = CryptoAlgs::Type::NONE;
+
       // OSI layer
       Layer layer;
 
@@ -308,6 +311,7 @@ namespace openvpn {
       OvpnHMACContext::Ptr tls_auth_context;
       int key_direction = -1;        // 0, 1, or -1 for bidirectional
 
+      bool ncp_disable = false;
       TLSCryptFactory::Ptr tls_crypt_factory;
       TLSCryptContext::Ptr tls_crypt_context;
 
@@ -398,17 +402,19 @@ namespace openvpn {
 	  CryptoAlgs::Type digest = CryptoAlgs::NONE;
 
 	  // data channel cipher
-	  {
-	    const Option *o = opt.get_ptr("cipher");
-	    if (o)
-	      {
-		const std::string& cipher_name = o->get(1, 128);
-		if (cipher_name != "none")
-		  cipher = CryptoAlgs::lookup(cipher_name);
-	      }
-	    else
-	      cipher = CryptoAlgs::lookup("BF-CBC");
-	  }
+      {
+          const Option *o = opt.get_ptr("cipher");
+
+          if(o)
+          {
+              const std::string& cipher_name = o->get(1, 128);
+
+              if(cipher_name != "none")
+                  cipher = CryptoAlgs::lookup(cipher_name);
+          }
+          else
+              cipher = CryptoAlgs::lookup("BF-CBC");
+      }
 
 	  // data channel HMAC
 	  {
@@ -425,9 +431,9 @@ namespace openvpn {
 	  dc.set_cipher(cipher);
 	  dc.set_digest(digest);
 
-      const Option* ncp_disable = opt.get_ptr("ncp-disable");
+      const Option* option_ncp_disable = opt.get_ptr("ncp-disable");
 
-      if(!ncp_disable)
+      if(!option_ncp_disable)
       {
           dc.set_ncp_enabled(true);
       }
@@ -736,6 +742,25 @@ namespace openvpn {
 	protocol = p;
 	set_pid_mode(false);
       }
+
+    void set_cipher(const CryptoAlgs::Type c)
+    {
+        if(c > CryptoAlgs::Type::NONE && c < CryptoAlgs::Type::SIZE)
+        {
+            user_selected_cipher = c;
+
+            dc.set_cipher(user_selected_cipher);
+        }
+        else
+            proto_option_error("set_cipher: illegal cipher type");
+    }
+
+    void set_ncp_disable(const bool n)
+    {
+        ncp_disable = n;
+
+        dc.set_ncp_enabled(!n);
+    }
 
       void set_tls_auth_digest(const CryptoAlgs::Type digest)
       {
@@ -3222,6 +3247,16 @@ namespace openvpn {
 	primary->set_protocol(p);
       if (secondary)
 	secondary->set_protocol(p);
+    }
+
+    void set_cipher(const CryptoAlgs::Type c)
+    {
+        config->set_cipher(c);
+    }
+
+    void set_ncp_disable(const bool n)
+    {
+        config->set_ncp_disable(n);
     }
 
     // Free up space when parent object has been halted but
