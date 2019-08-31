@@ -38,11 +38,10 @@
 #include <openvpn/tun/persist/tunpersist.hpp>
 #include <openvpn/tun/persist/tunwrapasio.hpp>
 #include <openvpn/tun/tunio.hpp>
+#include <openvpn/tun/win/client/clientconfig.hpp>
 #include <openvpn/tun/win/client/tunsetup.hpp>
 #include <openvpn/win/modname.hpp>
-
-#define OPENVPN_WINTUN_PACKET_SIZE_LEN    4
-#define OPENVPN_WINTUN_PACKET_ALIGN       4
+#include <openvpn/tun/win/client/wintun.hpp>
 
 namespace openvpn {
   namespace TunWin {
@@ -70,99 +69,12 @@ namespace openvpn {
 	  const bool retain_stream,
 	  ReadHandler read_handler,
 	  const Frame::Ptr& frame,
-	  const SessionStats::Ptr& stats,
-	  const bool wintun)
-	: Base(read_handler, frame, stats, wintun ? Frame::READ_WINTUN : Frame::READ_TUN)
+	  const SessionStats::Ptr& stats)
+	: Base(read_handler, frame, stats, Frame::READ_TUN)
       {
 	Base::name_ = name;
 	Base::retain_stream = retain_stream;
 	Base::stream = new TunWrapAsioStream<TunPersist>(tun_persist);
-      }
-
-      void register_wintun_write_buffer(BufferAllocated& buf)
-      {
-	buf.set_size(buf.max_size());
-	std::memset(buf.data(), 0, buf.size());
-	try {
-	  stream->write_some(buf.const_buffer());
-	}
-	catch (const openvpn_io::system_error& ex)
-	  {
-	    // this is expected for the first write call where
-	    // wintun just maps buffer
-	    if (ex.code().value() != ERROR_INVALID_USER_BUFFER)
-	      throw ex;
-	  }
-      }
-    };
-
-    // These types manage the underlying TAP driver HANDLE
-    typedef openvpn_io::windows::stream_handle TAPStream;
-    typedef ScopedAsioStream<TAPStream> ScopedTAPStream;
-    typedef TunPersistTemplate<ScopedTAPStream> TunPersist;
-
-    class ClientConfig : public TunClientFactory
-    {
-      friend class Client; // accesses wfp
-
-    public:
-      typedef RCPtr<ClientConfig> Ptr;
-
-      TunProp::Config tun_prop;
-      int n_parallel = 8;         // number of parallel async reads on tun socket
-      bool wintun = false;	  // wintun may return multiple packets
-
-      Frame::Ptr frame;
-      SessionStats::Ptr stats;
-
-      Stop* stop = nullptr;
-
-      TunPersist::Ptr tun_persist;
-
-      TunWin::SetupFactory::Ptr tun_setup_factory;
-
-      TunWin::SetupBase::Ptr new_setup_obj(openvpn_io::io_context& io_context)
-      {
-	if (tun_setup_factory)
-	  return tun_setup_factory->new_setup_obj(io_context, wintun);
-	else
-	  return new TunWin::Setup(io_context, wintun);
-      }
-
-      static Ptr new_obj()
-      {
-	return new ClientConfig;
-      }
-
-      virtual TunClient::Ptr new_tun_client_obj(openvpn_io::io_context& io_context,
-						TunClientParent& parent,
-						TransportClient* transcli) override;
-
-      virtual void finalize(const bool disconnected) override
-      {
-	if (disconnected)
-	  tun_persist.reset();
-      }
-
-      virtual bool layer_2_supported() const override
-      {
-	return true;
-      }
-
-      void set_wintun(bool wintun_arg)
-      {
-	  if (wintun_arg)
-	    {
-	      wintun = true;
-	      // we cannot use parallel reads with wintun, since it requires
-	      // the same buffer with the same length for every write() call
-	      n_parallel = 1;
-	    }
-	  else
-	    {
-	      wintun = false;
-	      n_parallel = 8;
-	    }
       }
     };
 
@@ -192,7 +104,7 @@ namespace openvpn {
 	      // Check if persisted tun session matches properties of to-be-created session
 	      if (tun_persist->use_persisted_tun(server_addr, config->tun_prop, opt))
 		{
-		  state = tun_persist->state();
+		  state = tun_persist->state().state;
 		  OPENVPN_LOG("TunPersist: reused tun context");
 		}
 	      else
@@ -223,14 +135,14 @@ namespace openvpn {
 		  {
 		    std::ostringstream os;
 		    auto os_print = Cleanup([&os](){ OPENVPN_LOG_STRING(os.str()); });
-		    th = tun_setup->establish(*po, Win::module_name(), config->stop, os);
+		    th = tun_setup->establish(*po, Win::module_name(), config->stop, os, NULL);
 		  }
 
 		  // create ASIO wrapper for HANDLE
 		  TAPStream* ts = new TAPStream(io_context, th);
 
 		  // persist tun settings state
-		  if (tun_persist->persist_tun_state(ts, state))
+		  if (tun_persist->persist_tun_state(ts, { state, nullptr }))
 		    OPENVPN_LOG("TunPersist: saving tun context:" << std::endl << tun_persist->options());
 
 		  // setup handler for external tun close
@@ -256,17 +168,8 @@ namespace openvpn {
 				     true,
 				     this,
 				     config->frame,
-				     config->stats,
-				     config->wintun));
+				     config->stats));
 	      impl->start(config->n_parallel);
-
-	      if (config->wintun)
-		{
-		  // wintun requires to "register" write buffer by passing zeroes
-		  // to the first write call with maximum buffer length
-		  frame_context.prepare(wintun_write);
-		  impl->register_wintun_write_buffer(wintun_write);
-		}
 
 	      if (!dhcp_capture)
 		parent.tun_connected(); // signal that we are connected
@@ -358,27 +261,7 @@ namespace openvpn {
 	    if (dhcp_capture)
 	      dhcp_inspect(buf);
 
-	    if (config->wintun)
-	      {
-		// end padding
-		auto packet_size = buf.size();
-		auto end_padding_size = (OPENVPN_WINTUN_PACKET_ALIGN -
-		  buf.size() & (OPENVPN_WINTUN_PACKET_ALIGN - 1)) % OPENVPN_WINTUN_PACKET_ALIGN;
-		if (end_padding_size > 0)
-		  buf.write(wintun_padding, end_padding_size);
-
-		// start padding and size
-		buf.prepend((unsigned char *)&packet_size, OPENVPN_WINTUN_PACKET_SIZE_LEN);
-
-		frame_context.prepare(wintun_write);
-		wintun_write.write(buf.c_data(), buf.size());
-
-		return impl->write(wintun_write);
-	      }
-	    else
-	      {
-		return impl->write(buf);
-	      }
+	    return impl->write(buf);
 	  }
 	else
 	  return false;
@@ -389,33 +272,7 @@ namespace openvpn {
 
       void tun_read_handler(PacketFrom::SPtr& pfp) // called by TunImpl
       {
-	if (config->wintun)
-	  {
-	    // we might receive up to 256 packets
-	    while (pfp->buf.size() > 0)
-	      {
-		// parse wintun encapsulation
-		auto packet_size = *(std::uint32_t*)pfp->buf.c_data();
-		pfp->buf.advance(OPENVPN_WINTUN_PACKET_SIZE_LEN);
-
-		// extract individual packet
-		frame_context.prepare(wintun_read);
-		wintun_read.write(pfp->buf.c_data(), packet_size);
-
-		parent.tun_recv(wintun_read);
-
-		// skip to the next packet
-		pfp->buf.advance(packet_size);
-
-		auto padding = (OPENVPN_WINTUN_PACKET_ALIGN -
-		  (packet_size & (OPENVPN_WINTUN_PACKET_ALIGN - 1))) % OPENVPN_WINTUN_PACKET_ALIGN;
-		pfp->buf.advance(padding);
-	      }
-	  }
-	else
-	  {
-	    parent.tun_recv(pfp->buf);
-	  }
+	parent.tun_recv(pfp->buf);
 
 #ifdef OPENVPN_DEBUG_TAPWIN
 	tap_process_logging();
@@ -532,14 +389,7 @@ namespace openvpn {
       std::unique_ptr<DHCPCapture> dhcp_capture;
       AsioTimer l2_timer;
 
-      unsigned char wintun_padding[OPENVPN_WINTUN_PACKET_ALIGN] = {};
       Frame::Context& frame_context;
-
-      // every write() to wintun requires the same buffer
-      BufferAllocated wintun_write;
-
-      // contains single IP packet read from wintun
-      BufferAllocated wintun_read;
 
       bool halt;
     };
@@ -548,7 +398,10 @@ namespace openvpn {
 							   TunClientParent& parent,
 							   TransportClient* transcli)
     {
-      return TunClient::Ptr(new Client(io_context, this, parent));
+      if (wintun)
+	return TunClient::Ptr(new WintunClient(io_context, this, parent));
+      else
+	return TunClient::Ptr(new Client(io_context, this, parent));
     }
 
   }
