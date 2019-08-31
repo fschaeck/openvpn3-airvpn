@@ -566,12 +566,12 @@ namespace openvpn {
     public:
       typedef RCPtr<SSL> Ptr;
 
-      virtual void start_handshake()
+      void start_handshake() override
       {
 	SSL_do_handshake(ssl);
       }
 
-      virtual ssize_t write_cleartext_unbuffered(const void *data, const size_t size)
+      ssize_t write_cleartext_unbuffered(const void *data, const size_t size) override
       {
 	const int status = BIO_write(ssl_bio, data, size);
 	if (status < 0)
@@ -588,7 +588,7 @@ namespace openvpn {
 	  return status;
       }
 
-      virtual ssize_t read_cleartext(void *data, const size_t capacity)
+      ssize_t read_cleartext(void *data, const size_t capacity) override
       {
 	if (!overflow)
 	  {
@@ -610,12 +610,12 @@ namespace openvpn {
 	  throw ssl_ciphertext_in_overflow();
       }
 
-      virtual bool read_cleartext_ready() const
+      bool read_cleartext_ready() const override
       {
 	return !bmq_stream::memq_from_bio(ct_in)->empty() || SSL_pending(ssl) > 0;
       }
 
-      virtual void write_ciphertext(const BufferPtr& buf)
+      void write_ciphertext(const BufferPtr& buf) override
       {
 	bmq_stream::MemQ* in = bmq_stream::memq_from_bio(ct_in);
 	if (in->size() < MAX_CIPHERTEXT_IN)
@@ -624,7 +624,7 @@ namespace openvpn {
 	  overflow = true;
       }
 
-      virtual void write_ciphertext_unbuffered(const unsigned char *data, const size_t size)
+      void write_ciphertext_unbuffered(const unsigned char *data, const size_t size) override
       {
 	bmq_stream::MemQ* in = bmq_stream::memq_from_bio(ct_in);
 	if (in->size() < MAX_CIPHERTEXT_IN)
@@ -633,17 +633,17 @@ namespace openvpn {
 	  overflow = true;
       }
 
-      virtual bool read_ciphertext_ready() const
+      bool read_ciphertext_ready() const override
       {
 	return !bmq_stream::memq_from_bio(ct_out)->empty();
       }
 
-      virtual BufferPtr read_ciphertext()
+      BufferPtr read_ciphertext() override
       {
 	return bmq_stream::memq_from_bio(ct_out)->read_buf();
       }
 
-      virtual std::string ssl_handshake_details() const
+      std::string ssl_handshake_details() const override
       {
 	return ssl_handshake_details(ssl);
       }
@@ -659,7 +659,7 @@ namespace openvpn {
 	return !SSL_session_reused(ssl);
       }
 
-      virtual const AuthCert::Ptr& auth_cert() const
+      const AuthCert::Ptr& auth_cert() const override
       {
 	// Reused sessions don't call the cert verify callbacks,
 	// so we must use an alternative method to build authcert.
@@ -668,7 +668,7 @@ namespace openvpn {
 	return authcert;
       }
 
-      virtual void mark_no_cache()
+      void mark_no_cache() override
       {
 	sess_cache_key.reset();
       }
@@ -830,7 +830,7 @@ namespace openvpn {
       }
 
       // Print a one line summary of SSL/TLS session handshake.
-      static std::string ssl_handshake_details (::SSL *c_ssl)
+      static std::string ssl_handshake_details (const ::SSL *c_ssl)
       {
 	std::ostringstream os;
 
@@ -860,7 +860,10 @@ namespace openvpn {
 	      }
 	    X509_free (cert);
 	  }
-	if (SSL_session_reused(c_ssl))
+	// This has been changed in upstream SSL to have a const
+	// parameter, so we cast away const for older versions compatibility
+	// (Upstream commit: c04b66b18d1a90f0c6326858e4b8367be5444582)
+	if (SSL_session_reused(const_cast<::SSL *>(c_ssl)))
 	  os << " [REUSED]";
 	return os.str();
       }
@@ -2123,13 +2126,19 @@ namespace openvpn {
     OpenSSLSessionCache::Ptr sess_cache; // client-side only
   };
 
+#ifdef OPENVPN_NO_EXTERN
   int OpenSSLContext::SSL::ssl_data_index = -1;
   int OpenSSLContext::SSL::context_data_index = -1;
+#endif
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
   SSL_METHOD OpenSSLContext::SSL::ssl23_method_client_;
   SSL_METHOD OpenSSLContext::SSL::ssl23_method_server_;
 #endif
-}
 
+  inline const std::string get_ssl_library_version()
+  {
+    return OPENSSL_VERSION_TEXT;
+  }
+}
 #endif

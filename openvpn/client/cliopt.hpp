@@ -124,6 +124,8 @@ namespace openvpn {
       std::string sso_methods;
       std::string server_override;
       std::string port_override;
+      std::string hw_addr_override;
+      std::string platform_version;
       Protocol proto_override;
       CryptoAlgs::Type cipher_override = CryptoAlgs::Type::NONE;
       IPv6Setting ipv6;
@@ -437,7 +439,7 @@ namespace openvpn {
 	    tunconf->frame = frame;
 	    tunconf->stats = cli_stats;
 	    tunconf->stop = config.stop;
-	    tunconf->set_wintun(config.wintun);
+	    tunconf->wintun = config.wintun;
 	    if (config.tun_persist)
 	    {
 	      tunconf->tun_persist.reset(new TunWin::TunPersist(true, false, nullptr));
@@ -547,14 +549,27 @@ namespace openvpn {
       // setenv UV_ options
       pi->append_foreign_set_ptr(pcc.peerInfoUV());
 
+      // UI version
+      if (!config.gui_version.empty())
+	pi->emplace_back("IV_GUI_VER", config.gui_version);
+
+      // Supported SSO methods
+      if (!config.sso_methods.empty())
+	pi->emplace_back("IV_SSO", config.sso_methods);
+
       // MAC address
       if (pcc.pushPeerInfo())
 	{
 	  std::string hwaddr = get_hwaddr();
-	  if (!hwaddr.empty())
+	  if (!config.hw_addr_override.empty())
+	    pi->emplace_back("IV_HWADDR", config.hw_addr_override);
+	  else if (!hwaddr.empty())
 	    pi->emplace_back("IV_HWADDR", hwaddr);
-	}
+	  pi->emplace_back ("IV_SSL", get_ssl_library_version());
 
+	  if (!config.platform_version.empty())
+	    pi->emplace_back("IV_PLAT_VER", config.platform_version);
+	}
       return pi;
     }
 
@@ -731,8 +746,6 @@ namespace openvpn {
       cp->ssl_factory = cc->new_factory();
       cp->load(opt, *proto_context_options, config.default_key_direction, false);
       cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword() || autologin_sessions);
-      cp->gui_version = config.gui_version;
-      cp->sso_methods = config.sso_methods;
       cp->force_aes_cbc_ciphersuites = config.force_aes_cbc_ciphersuites; // also used to disable proto V2
       cp->extra_peer_info = build_peer_info(config, pcc, autologin_sessions);
       cp->frame = frame;
