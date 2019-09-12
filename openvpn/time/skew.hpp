@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Inc.
+//    Copyright (C) 2012-2019 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -19,46 +19,35 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Define the ICMPv6 header
-
 #pragma once
 
-#include <cstdint> // for std::uint32_t, uint16_t, uint8_t
+#include <algorithm>
 
-#include <openvpn/ip/ip6.hpp>
-
-#pragma pack(push)
-#pragma pack(1)
+#include <openvpn/time/time.hpp>
+#include <openvpn/random/randapi.hpp>
 
 namespace openvpn {
 
-  struct ICMPv6 {
+  struct TimeSkew
+  {
+    // Skew factors (+/- %).
+    // Pass these to skew() via factor parameter.
     enum {
-      ECHO_REQUEST    = 128,
-      ECHO_REPLY      = 129,
-      DEST_UNREACH    = 1,
-      PACKET_TOO_BIG  = 2
+      PCT_50     = 0,
+      PCT_25     = 1,
+      PCT_12_5   = 2,
+      PCT_6_25   = 3,
+      PCT_3_125  = 4,
+      PCT_1_5625 = 5,
     };
 
-    struct IPv6Header head;
-
-    union {
-      struct {
-	std::uint8_t type;
-	std::uint8_t code;
-      };
-      std::uint16_t type_code;
-    };
-    std::uint16_t checksum;
-
-    union {
-      struct {
-	std::uint16_t id;
-	std::uint16_t seq_num;
-      };
-      std::uint32_t mtu;
-    };
+    // Skew a duration by some random flux.
+    static Time::Duration skew(const Time::Duration& dur, const unsigned int factor, RandomAPI& prng)
+    {
+      const std::uint32_t bms = std::min(dur.to_binary_ms() >> factor, oulong(0x40000000)); // avoid 32-bit overflow in next step
+      const int flux = int(prng.randrange32(bms)) - int(bms/2);
+      return dur + flux;
+    }
   };
-}
 
-#pragma pack(pop)
+}

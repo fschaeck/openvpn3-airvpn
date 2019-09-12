@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2017 OpenVPN Inc.
+//    Copyright (C) 2012-2019 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -19,46 +19,40 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Define the ICMPv6 header
-
 #pragma once
 
-#include <cstdint> // for std::uint32_t, uint16_t, uint8_t
-
-#include <openvpn/ip/ip6.hpp>
-
-#pragma pack(push)
-#pragma pack(1)
+#include <openvpn/buffer/buffer.hpp>
 
 namespace openvpn {
 
-  struct ICMPv6 {
-    enum {
-      ECHO_REQUEST    = 128,
-      ECHO_REPLY      = 129,
-      DEST_UNREACH    = 1,
-      PACKET_TOO_BIG  = 2
-    };
+  // Iterate over the lines in a buffer by returning
+  // a sub-buffer for each line.  Zero-copy.
+  class BufferLineIterator
+  {
+  public:
+    BufferLineIterator(const ConstBuffer& buf)
+      : src(buf)
+    {
+    }
 
-    struct IPv6Header head;
+    // Returns a zero-length buffer at end of iteration
+    ConstBuffer next()
+    {
+      return src.read_alloc_buf(line_len());
+    }
 
-    union {
-      struct {
-	std::uint8_t type;
-	std::uint8_t code;
-      };
-      std::uint16_t type_code;
-    };
-    std::uint16_t checksum;
+  private:
+    size_t line_len() const
+    {
+      const unsigned char *const data = src.c_data();
+      size_t i = 0;
+      while (i < src.size())
+	if (data[i++] == '\n')
+	  break;
+      return i;
+    }
 
-    union {
-      struct {
-	std::uint16_t id;
-	std::uint16_t seq_num;
-      };
-      std::uint32_t mtu;
-    };
+    ConstBuffer src;
   };
-}
 
-#pragma pack(pop)
+}
