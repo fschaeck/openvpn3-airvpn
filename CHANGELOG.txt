@@ -1,10 +1,3 @@
-Changelog 3.3.3 AirVPN - Release date: xx October 2019 by ProMIND
-
-
-
-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-
-
 Changelog 3.3.2 AirVPN - Release date: 10 October 2019 by ProMIND
 
 - [ProMIND] [2019/09/04] fixed bug in openvpn/tun/linux/client/tunsetup.hpp: changed if(conf->txqueuelen) to if(conf->txqueuelen > 0) which made linux connection to fail
