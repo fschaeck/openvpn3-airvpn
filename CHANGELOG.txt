@@ -1,14 +1,20 @@
+Changelog 3.3.3 AirVPN - Release date: xx October 2019 by ProMIND
+
+
+
+*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+
 Changelog 3.3.2 AirVPN - Release date: 10 October 2019 by ProMIND
 
 - [ProMIND] [2019/09/04] fixed bug in openvpn/tun/linux/client/tunsetup.hpp: changed if(conf->txqueuelen) to if(conf->txqueuelen > 0) which made linux connection to fail
 - [ProMIND] [2019/09/04] openvpn/tun/linux/client/tuncli.hpp: added initialization to TunLinux::Config::txqueuelen
 - [ProMIND] [2019/09/10] openvpn/tun/linux/client/tunsetup.hpp: removed remove_cmds->execute(os) call in establish which prevented reconnection to work properly
 - [ProMIND] [2019/09/10] openvpn/tun/linux/client/tunsetup.hpp: removed connected_gw member and related code which prevented reconnection to work properly
-- [ProMIND] [1019/10/10] added method getRemoteList(). It returns remoteList member with list of profile's remote entries
+- [ProMIND] [1019/10/10] openvpn/client/cliopthelper.hpp: added method getRemoteList(). Returns remoteList member with list of profile's remote entries
 - [ProMIND] [2019/10/10] client/ovpncli.hpp: added RemoteEntry structure to reflect profile's remote entries
 - [ProMIND] [2019/10/10] client/ovpncli.hpp: added remoteList member
 - [ProMIND] [2019/10/10] client/ovpncli.cpp: OpenVPNClient::parse_config now assigns remoteList member with values of ParseClientConfig.getRemoteList()
-
 
 
 *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
