@@ -47,6 +47,15 @@ namespace openvpn {
       std::string friendlyName;
     };
 
+    // Represents an OpenVPN remote entry
+    // (client reads)
+    struct RemoteEntry
+    {
+      std::string server;
+      std::string port;
+      std::string protocol;
+    };
+
     // return properties of config
     // (client reads)
     struct EvalConfig
@@ -91,6 +100,9 @@ namespace openvpn {
 
       // optional list of user-selectable VPN servers
       std::vector<ServerEntry> serverList;
+
+      // list of remote servers
+      std::vector<RemoteEntry> remoteList;
     };
 
     // used to pass credentials to VPN core

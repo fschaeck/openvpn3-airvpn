@@ -76,8 +76,8 @@ namespace openvpn {
 	std::string iface_name;
 	Layer layer; // OSI layer
 	std::string dev_name;
-	int txqueuelen;
-	bool add_bypass_routes_on_establish; // required when not using tunbuilder
+	int txqueuelen = 200;
+	bool add_bypass_routes_on_establish = false; // required when not using tunbuilder
 
 #ifdef HAVE_JSON
 	virtual Json::Value to_json() override
@@ -114,9 +114,6 @@ namespace openvpn {
 			    bool ipv6,
 			    std::ostream& os)
       {
-	// nothing to do if we reconnect to the same gateway
-	if (connected_gw == address)
-	  return true;
 
 	// remove previous bypass route
 	remove_cmds_bypass_gw->execute(os);
@@ -162,7 +159,7 @@ namespace openvpn {
 	  throw tun_fcntl_error(errinfo(errno));
 
 	// Set the TX send queue size
-	if (conf->txqueuelen)
+	if (conf->txqueuelen > 0)
 	  {
 	    struct ifreq netifr;
 	    ScopedFD ctl_fd(socket (AF_INET, SOCK_DGRAM, 0));
@@ -191,11 +188,7 @@ namespace openvpn {
 	// execute commands to bring up interface
 	add_cmds->execute(os);
 
-	// tear down old routes
-	remove_cmds->execute(os);
 	std::swap(remove_cmds, remove_cmds_new);
-
-	connected_gw = pull.remote_address.to_string();
 
 	return fd.release();
       }
@@ -233,8 +226,6 @@ namespace openvpn {
 
       ActionList::Ptr remove_cmds_bypass_gw = new ActionList();
       ActionListReversed::Ptr remove_cmds = new ActionListReversed();
-
-      std::string connected_gw;
 
       std::string tun_iface_name; // used to skip tun-based default gw when add bypass route
     };

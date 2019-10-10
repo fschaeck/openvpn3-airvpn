@@ -430,6 +430,7 @@ namespace openvpn {
 
     // return first remote directive in config
     const RemoteItem& firstRemoteListItem() const { return firstRemoteListItem_; }
+    const RemoteList::Ptr getRemoteList() const { return remoteList; }
 
     std::string to_string() const
     {

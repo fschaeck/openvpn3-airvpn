@@ -659,6 +659,34 @@ namespace openvpn {
 	eval.remoteHost = config.serverOverride.empty() ? cc.firstRemoteListItem().host : config.serverOverride;
 	eval.remotePort = cc.firstRemoteListItem().port;
 	eval.remoteProto = cc.firstRemoteListItem().proto;
+
+    RemoteList::Ptr rl = cc.getRemoteList();
+
+    eval.remoteList.clear();
+
+    for(size_t i = 0; i < rl->size(); i++)
+    {
+        const RemoteList::Item& item = rl->get_item(i);
+
+	    RemoteEntry re;
+
+	    re.server = item.server_host;
+	    re.port = item.server_port;
+	
+        const char *proto = item.transport_protocol.protocol_to_string();
+
+        if(proto)
+        {
+            re.protocol = proto;
+        }
+        else
+        {
+            re.protocol = "";
+        }
+
+	    eval.remoteList.push_back(re);
+    }
+
 	for (ParseClientConfig::ServerList::const_iterator i = cc.serverList().begin(); i != cc.serverList().end(); ++i)
 	  {
 	    ServerEntry se;
