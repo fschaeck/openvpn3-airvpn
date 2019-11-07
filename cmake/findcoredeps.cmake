@@ -17,19 +17,20 @@ endif ()
 
 # Include our DEP_DIR in path used to find libraries
 
+if (APPLE)
+    set(OPENVPN_PLAT osx)
+elseif (WIN32)
+    set(OPENVPN_PLAT amd64)
+else ()
+    set(OPENVPN_PLAT linux)
+endif ()
+
 
 function(add_core_dependencies target)
-    if (APPLE)
-        set(PLAT osx)
-    elseif (WIN32)
-        set(PLAT amd64)
-    else ()
-        set(PLAT linux)
-    endif ()
+    set(PLAT ${OPENVPN_PLAT})
 
     set(CORE_INCLUDES
             ${CORE_DIR}
-            ${DEP_DIR}/asio/asio/include
             )
     set(CORE_DEFINES
             -DASIO_STANDALONE
@@ -40,26 +41,20 @@ function(add_core_dependencies target)
             )
 
     if (WIN32)
-        list(APPEND CMAKE_PREFIX_PATH
-                ${DEP_DIR}/${PLAT}/mbedtls
-                ${DEP_DIR}/${PLAT}/lz4/lib
-                )
-        list(APPEND CMAKE_LIBRARY_PATH
-                ${DEP_DIR}/${PLAT}/mbedtls/library
-                )
-        list(APPEND CORE_INCLUDES
-                ${DEP_DIR}/${PLAT}/asio/asio/include
-                ${DEP_DIR}/${PLAT}/lz4/lz4/include
-                ${DEP_DIR}/${PLAT}/tap-windows/src
-                )
         list(APPEND CORE_DEFINES
                 -D_WIN32_WINNT=0x0600
                 -DTAP_WIN_COMPONENT_ID=tap0901
                 -D_CRT_SECURE_NO_WARNINGS
                 )
-        set(EXTRA_LIBS fwpuclnt.lib Iphlpapi.lib)
+        set(EXTRA_LIBS fwpuclnt.lib Iphlpapi.lib lz4::lz4)
         target_compile_options(${target} PRIVATE "/bigobj")
+
+        find_package(lz4 CONFIG REQUIRED)
+        list(APPEND CORE_INCLUDES ${ASIO_INCLUDE_DIR})
     else ()
+        list(APPEND CORE_INCLUDES
+                ${DEP_DIR}/asio/asio/include
+                )
         list(APPEND CMAKE_PREFIX_PATH
                 ${DEP_DIR}/mbedtls/mbedtls-${PLAT}
                 ${DEP_DIR}/lz4/lz4-${PLAT}
@@ -67,6 +62,8 @@ function(add_core_dependencies target)
         list(APPEND CMAKE_LIBRARY_PATH
                 ${DEP_DIR}/mbedtls/mbedtls-${PLAT}/library
                 )
+
+        find_package(LZ4 REQUIRED)
     endif ()
 
 
@@ -98,7 +95,6 @@ function(add_core_dependencies target)
         target_link_libraries(${target} pthread)
     endif()
 
-    find_package(LZ4 REQUIRED)
     list(APPEND CORE_INCLUDES ${LZ4_INCLUDE_DIR})
 
     target_include_directories(${target} PRIVATE ${CORE_INCLUDES})
