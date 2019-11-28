@@ -247,6 +247,12 @@ namespace openvpn {
     // prior to final disconnect.
     virtual void tun_builder_teardown(bool disconnect) {}
 
+    // Return true if server's DNS push must be ignored
+    virtual bool ignore_dns_push()
+    {
+      return false;
+    }
+
     virtual ~TunBuilderBase() {}
   };
 }

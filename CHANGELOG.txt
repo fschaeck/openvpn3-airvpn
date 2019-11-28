@@ -1,5 +1,7 @@
-Changelog 3.3.3 AirVPN - Release date: xx October 2019 by ProMIND
+Changelog 3.6.1 AirVPN - Release date: 28 November 2019 by ProMIND
 
+- [ProMIND] [2019/11/28] openvpn/tun/builder/base.hpp: Added virtual method ignore_dns_push() to TunBuilderBase class
+- [ProMIND] [2019/11/28] openvpn/tun/client/tunprop.hpp: added DNS push ignore to method add_dhcp_options()
 
 
 *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*

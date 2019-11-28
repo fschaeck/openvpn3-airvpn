@@ -1,4 +1,4 @@
-OpenVPN 3 AirVPN (Version 3.3.2)
+OpenVPN 3 AirVPN (Version 3.6.1)
 ================================
 
 OpenVPN 3 AirVPN is a direct fork of the official master project (https://github.com/OpenVPN/openvpn3) with these extra features:
@@ -7,9 +7,10 @@ OpenVPN 3 AirVPN is a direct fork of the official master project (https://github
 * added cipher override to client configuration
 * added ncp disable override to client configuration
 * added ncp-disable option in openvpn profile
+* added support for DNS push ignore to Tunnel Builder
 * bug fixes and new features
 
-This fork is maintained by AirVPN (https://airvpn.org) and it is used in Eddie for Android edition app available at https://play.google.com/store/apps/details?id=org.airvpn.eddie
+This fork is maintained by AirVPN (https://airvpn.org) and it is used in Eddie for Android edition app available in Google Play at https://play.google.com/store/apps/details?id=org.airvpn.eddie and in Amazon Store at https://www.amazon.com/Eddie-AirVPN-official-OpenVPN-GUI/dp/B07KTD6DH9
 
 Direct link for sideloading the apk file can be found in AirVPN forum "News and Announcement" section https://airvpn.org/forums/forum/9-news-and-announcement/
 

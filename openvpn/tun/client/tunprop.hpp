@@ -180,7 +180,7 @@ namespace openvpn {
 		OPENVPN_LOG("Google DNS fallback enabled");
 	      add_google_dns(tb);
 	    }
-	  else if (stats && (config.layer() != Layer::OSI_LAYER_2))
+	  else if (stats && (config.layer() != Layer::OSI_LAYER_2) && tb->ignore_dns_push() == false)
 	    stats->error(Error::REROUTE_GW_NO_DNS);
 	}
 
@@ -515,14 +515,31 @@ namespace openvpn {
 	      try {
 		const std::string& type = o.get(1, 64);
 		if (type == "DNS" || type == "DNS6")
-		  {
-		    o.exact_args(3);
-		    const IP::Addr ip = IP::Addr::from_string(o.get(2, 256), "dns-server-ip");
-		    if (!tb->tun_builder_add_dns_server(ip.to_string(),
+        {
+            const IP::Addr ip = IP::Addr::from_string(o.get(2, 256), "dns-server-ip");
+            
+            if(tb->ignore_dns_push() == false)
+            {
+                o.exact_args(3);
+                if (!tb->tun_builder_add_dns_server(ip.to_string(),
 							ip.version() == IP::Addr::V6))
-		      throw tun_prop_dhcp_option_error("tun_builder_add_dns_server failed");
-		    flags |= F_ADD_DNS;
-		  }
+                    throw tun_prop_dhcp_option_error("tun_builder_add_dns_server failed");
+                flags |= F_ADD_DNS;
+            }
+            else
+            {
+                std::string logMessage = "Pushed DNS Server IPv";
+                
+                if(ip.version() == IP::Addr::V6)
+                    logMessage += "6";
+                else
+                    logMessage += "4";
+                
+                logMessage += " " + ip.to_string() + " ignored";
+
+                OPENVPN_LOG(logMessage);
+            }
+		}
 		else if (type == "DOMAIN")
 		  {
 		    o.min_args(3);
