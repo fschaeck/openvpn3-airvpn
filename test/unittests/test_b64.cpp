@@ -47,7 +47,7 @@ std::string ssllib_b64enc(const char* text, size_t textlen)
 
     BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL); //Ignore newlines - write everything in one line
     BIO_write(bio, text, (int)textlen);
-    BIO_flush(bio);
+    EXPECT_TRUE(BIO_flush(bio) == 1);
     const char* encdata;
     long len = BIO_get_mem_data(bio, &encdata);
 
@@ -171,7 +171,7 @@ TEST(Base64, binary_data)
     for(unsigned int i=0;i<20;i++)
     {
         char* data = new char[i];
-        for (int j=0;j<i;j++)
+        for (unsigned int j=0;j<i;j++)
 	{
             data[j]=(char)(std::rand() & 0xff);
 	}
