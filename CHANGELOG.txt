@@ -1,3 +1,11 @@
+Changelog 3.6.2 AirVPN - Release date: 24 January 2020 by ProMIND
+
+- [ProMIND] [2020/01/24] openvpn/ssl/proto.hpp: set_ncp_disable() fixed bug for ncp-disable override which caused to ignore the corresponding profile setting
+
+
+*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+
 Changelog 3.6.1 AirVPN - Release date: 28 November 2019 by ProMIND
 
 - [ProMIND] [2019/11/28] openvpn/tun/builder/base.hpp: Added virtual method ignore_dns_push() to TunBuilderBase class

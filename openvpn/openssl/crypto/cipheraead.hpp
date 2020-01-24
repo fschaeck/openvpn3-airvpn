@@ -211,7 +211,7 @@ namespace openvpn
 	
                 ciphertext_len += len;
 	
-                if(ciphertext_len != length)
+                if((size_t)ciphertext_len != length)
                 {
                     throw openssl_aead_error("encrypt size inconsistency");
                 }
@@ -270,7 +270,7 @@ namespace openvpn
 	
                 plaintext_len += len;
 	
-                if(plaintext_len != length)
+                if(static_cast<size_t>(plaintext_len) != length)
                 {
                     throw openssl_aead_error("decrypt size inconsistency");
                 }

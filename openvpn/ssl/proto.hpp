@@ -754,11 +754,16 @@ namespace openvpn {
             proto_option_error("set_cipher: illegal cipher type");
     }
 
-    void set_ncp_disable(const bool n)
+    void set_ncp_disable(const bool disabled)
     {
-        ncp_disable = n;
+        if(dc.ncp_enabled() && disabled == true)
+        {
+            // ncp disable override
+            
+            ncp_disable = disabled;
 
-        dc.set_ncp_enabled(!n);
+            dc.set_ncp_enabled(false);
+        }
     }
 
       void set_tls_auth_digest(const CryptoAlgs::Type digest)
