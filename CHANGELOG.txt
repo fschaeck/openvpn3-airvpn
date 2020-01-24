@@ -1,6 +1,6 @@
 Changelog 3.6.2 AirVPN - Release date: 24 January 2020 by ProMIND
 
-- [ProMIND] [2020/01/24] openvpn/ssl/proto.hpp: set_ncp_disable() fixed bug for ncp-disable override which caused to ignore the corresponding profile setting
+- [ProMIND] [2020/01/24] openvpn/ssl/proto.hpp: set_ncp_disable() fixed bug for ncp-disable override which caused profile setting to be ignored
 
 
 *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
