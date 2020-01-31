@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
-
-project(ovpncli)
 set(CMAKE_CXX_STANDARD 14)
 
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake;${CMAKE_MODULE_PATH}")
 include(findcoredeps)
 
 option(CLI_NULLTUN "Build ovpncli variant with null tun" OFF)
@@ -21,7 +18,6 @@ if (${CLI_NULLTUN})
     target_compile_definitions(ovpnclinull PRIVATE -DOPENVPN_FORCE_TUN_NULL)
 endif ()
 
-
 if (${CLI_DCO})
     include(kovpn)
 
@@ -30,4 +26,12 @@ if (${CLI_DCO})
     add_kovpn_dependency(ovpnclidco)
     target_include_directories(ovpnclidco PRIVATE ${KOVPN_SOURCE})
     target_compile_definitions(ovpnclidco PRIVATE -DENABLE_DCO)
+endif ()
+
+if (WIN32)
+    # for macos, agent-enabled client requires common and is built by scripts there
+    add_executable(ovpncliagent cli.cpp)
+    add_core_dependencies(ovpncliagent)
+    add_json_library(ovpncliagent)
+    target_compile_definitions(ovpncliagent PRIVATE -DOPENVPN_COMMAND_AGENT)
 endif ()

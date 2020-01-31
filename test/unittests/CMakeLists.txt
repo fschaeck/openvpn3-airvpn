@@ -3,7 +3,6 @@ cmake_minimum_required(VERSION 3.5)
 project(tests)
 set(CMAKE_CXX_STANDARD 14)
 
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake;${CMAKE_MODULE_PATH}")
 include(findcoredeps)
 include(dlgoogletest)
 
@@ -59,7 +58,7 @@ set(CORE_TEST_DEFINES
 add_executable(coreUnitTests ${SOURCES})
 
 add_core_dependencies(coreUnitTests)
-target_link_libraries(coreUnitTests gtest_main ${EXTRA_LIBS})
+target_link_libraries(coreUnitTests ${GTEST_LIB} ${EXTRA_LIBS})
 
 target_compile_definitions(coreUnitTests PRIVATE ${CORE_TEST_DEFINES})
 target_include_directories(coreUnitTests PRIVATE ${EXTRA_INCLUDES})
