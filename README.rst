@@ -12,6 +12,7 @@ OpenVPN 3 AirVPN is a direct fork of the official master project (https://github
 * bug fixes and new features
 
 This fork is maintained by AirVPN (https://airvpn.org) and it is used in Eddie for Android edition app available in Google Play at https://play.google.com/store/apps/details?id=org.airvpn.eddie and in Amazon Store at https://www.amazon.com/Eddie-AirVPN-official-OpenVPN-GUI/dp/B07KTD6DH9
+
 OpenVPN 3 AirVPN is also used in Hummingbird, a free and open source client for Linux, Raspberry, ARM32, ARM64
 and macOS and available at https://gitlab.com/AirVPN/hummingbird
 
