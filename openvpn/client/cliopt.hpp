@@ -130,6 +130,7 @@ namespace openvpn {
       CryptoAlgs::Type cipher_override = CryptoAlgs::Type::NONE;
       IPv6Setting ipv6;
       int conn_timeout = 0;
+      unsigned int tcp_queue_limit = 64;
       SessionStats::Ptr cli_stats;
       ClientEvent::Queue::Ptr cli_events;
       ProtoContextOptions::Ptr proto_context_options;
@@ -191,13 +192,13 @@ namespace openvpn {
 	proto_override(config.proto_override),
 	cipher_override(config.cipher_override),
 	conn_timeout_(config.conn_timeout),
-	tcp_queue_limit(64),
+	tcp_queue_limit(config.tcp_queue_limit),
 	proto_context_options(config.proto_context_options),
 	http_proxy_options(config.http_proxy_options),
 #ifdef OPENVPN_GREMLIN
 	gremlin_config(config.gremlin_config),
 #endif
-    ncp_disable(config.ncp_disable),
+        ncp_disable(config.ncp_disable),
 	echo(config.echo),
 	info(config.info),
 	autologin(false),
@@ -210,6 +211,8 @@ namespace openvpn {
 	,extern_transport_factory(config.extern_transport_factory)
 #endif
     {
+      unsigned int limit = 0;
+        
       // parse general client options
       const ParseClientConfig pcc(opt);
 
@@ -239,7 +242,11 @@ namespace openvpn {
       frame = frame_init(true, tun_mtu, mc.mssfix_ctrl, true);
 
       // TCP queue limit
-      tcp_queue_limit = opt.get_num<decltype(tcp_queue_limit)>("tcp-queue-limit", 1, tcp_queue_limit, 1, 65536);
+      
+      limit = opt.get_num<decltype(tcp_queue_limit)>("tcp-queue-limit", 1, tcp_queue_limit, 1, 65536);
+
+      if(limit > tcp_queue_limit)
+          tcp_queue_limit = limit;
 
       // route-nopull
       pushed_options_filter.reset(new PushedOptionsFilter(opt.exists("route-nopull")));
@@ -897,7 +904,7 @@ namespace openvpn {
     Protocol proto_override;
     CryptoAlgs::Type cipher_override = CryptoAlgs::Type::NONE;
     int conn_timeout_;
-    unsigned int tcp_queue_limit;
+    unsigned int tcp_queue_limit = 64;
     ProtoContextOptions::Ptr proto_context_options;
     HTTPProxyTransport::Options::Ptr http_proxy_options;
 #ifdef OPENVPN_GREMLIN

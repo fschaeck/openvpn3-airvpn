@@ -220,6 +220,9 @@ namespace openvpn {
       // Connection timeout in seconds, or 0 to retry indefinitely
       int connTimeout = 0;
 
+      // TCP queue limit in packets, or 0 for default 64 packets
+      unsigned int tcpQueueLimit = 0;
+
       // If true, disables negotiable crypto parameters
       bool disableNCP = false;
 

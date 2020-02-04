@@ -131,8 +131,8 @@ namespace openvpn {
 	ClientCreds::Ptr creds;
 	OptionList::Limits pushed_options_limit;
 	OptionList::FilterBase::Ptr pushed_options_filter;
-	unsigned int tcp_queue_limit = 0;
-    bool ncp_disable = false;
+	unsigned int tcp_queue_limit = 64;
+        bool ncp_disable = false;
 	bool echo = false;
 	bool info = false;
 	bool autologin_sessions = false;
@@ -155,7 +155,7 @@ namespace openvpn {
       cipher(config.cipher),
 	  cli_stats(config.cli_stats),
 	  cli_events(config.cli_events),
-      ncp_disable(config.ncp_disable),
+          ncp_disable(config.ncp_disable),
 	  echo(config.echo),
 	  info(config.info),
 	  autologin_sessions(config.autologin_sessions),
@@ -1093,7 +1093,7 @@ namespace openvpn {
       TunClientFactory::Ptr tun_factory;
       TunClient::Ptr tun;
 
-      unsigned int tcp_queue_limit;
+      unsigned int tcp_queue_limit = 64;
       bool transport_has_send_queue = false;
 
       NotifyCallback* notify_callback;

@@ -431,6 +431,7 @@ namespace openvpn {
     CryptoAlgs::Type cipher_override;
 	IPv6Setting ipv6;
 	int conn_timeout = 0;
+	unsigned int tcp_queue_limit = 64;
 	bool ncp_disable = false;
 	bool tun_persist = false;
 	bool wintun = false;
@@ -751,7 +752,11 @@ namespace openvpn {
 	state->platform_version = config.platformVersion;
 	state->hw_addr_override = config.hwAddrOverride;
 	state->alt_proxy = config.altProxy;
-	state->ncp_disable = config.disableNCP;
+	
+        if(config.tcpQueueLimit > 0)
+            state->tcp_queue_limit = config.tcpQueueLimit;
+	
+        state->ncp_disable = config.disableNCP;
 	state->dco = config.dco;
 	state->echo = config.echo;
 	state->info = config.info;
@@ -1016,6 +1021,7 @@ namespace openvpn {
       cc.proto_context_options = state->proto_context_options;
       cc.http_proxy_options = state->http_proxy_options;
       cc.alt_proxy = state->alt_proxy;
+      cc.tcp_queue_limit = state->tcp_queue_limit;
       cc.ncp_disable = state->ncp_disable;
       cc.dco = state->dco;
       cc.echo = state->echo;

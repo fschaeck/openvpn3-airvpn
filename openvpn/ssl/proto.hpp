@@ -711,14 +711,14 @@ namespace openvpn {
 	os << "  cipher: " << CryptoAlgs::name(dc.cipher()) << std::endl;
 	os << "  digest: " << CryptoAlgs::name(dc.digest()) << std::endl;
 
-    os << "  ncp enabled: ";
+        os << "  ncp enabled: ";
 
-    if(dc.ncp_enabled())
-        os << "yes";
-    else
-        os << "no";
+        if(dc.ncp_enabled())
+            os << "yes";
+        else
+            os << "no";
 
-    os << std::endl;
+        os << std::endl;
 
 	os << "  compress: " << comp_ctx.str() << std::endl;
 	os << "  peer ID: " << remote_peer_id << std::endl;
