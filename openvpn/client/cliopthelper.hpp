@@ -239,6 +239,15 @@ namespace openvpn {
 	      if (remoteList)
 		profileName_ = remoteList->first_server_host();
 	    }
+
+	  // windows-driver
+	  {
+	    const Option* o = options.get_ptr("windows-driver");
+	    if (o)
+	      {
+		windowsDriver_ = o->get(1, 256);
+	      }
+	  }
 	}
 
 	// friendly name
@@ -432,6 +441,8 @@ namespace openvpn {
     // return first remote directive in config
     const RemoteItem& firstRemoteListItem() const { return firstRemoteListItem_; }
     const RemoteList::Ptr getRemoteList() const { return remoteList; }
+
+    const std::string& windowsDriver() const { return windowsDriver_; }
 
     std::string to_string() const
     {
@@ -713,6 +724,7 @@ namespace openvpn {
     ProtoContext::Config::Ptr protoConfig;
     SSLLib::SSLAPI::Config::Ptr sslConfig;
     std::string dev;
+    std::string windowsDriver_;
   };
 }
 
