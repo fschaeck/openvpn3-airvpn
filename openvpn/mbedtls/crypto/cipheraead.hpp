@@ -170,7 +170,14 @@ namespace openvpn
                 return initialized;
             }
 
-            private:
+            static bool is_supported(const CryptoAlgs::Type alg)
+            {
+                unsigned int keysize;
+       	
+                return(cipher_type(alg, keysize) != MBEDTLS_CIPHER_ID_NONE);
+            }
+        
+        private:
 
             static mbedtls_cipher_id_t cipher_type(const CryptoAlgs::Type alg, unsigned int& keysize)
             {

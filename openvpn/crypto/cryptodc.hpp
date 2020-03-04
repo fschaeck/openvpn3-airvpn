@@ -24,7 +24,6 @@
 #ifndef OPENVPN_CRYPTO_CRYPTODC_H
 #define OPENVPN_CRYPTO_CRYPTODC_H
 
-#include <iostream>
 #include <utility> // for std::move
 #include <cstdint> // for std::uint32_t, etc.
 
