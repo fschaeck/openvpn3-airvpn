@@ -766,7 +766,6 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	bool disableClientCert = false;
 	bool proxyAllowCleartextAuth = false;
 	int defaultKeyDirection = -1;
-	bool forceAesCbcCiphersuites = false;
 	int sslDebugLevel = 0;
 	bool googleDnsFallback = false;
 	bool autologinSessions = false;
@@ -787,7 +786,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 
 	int ch;
 	optind = 1;
-	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjwmvaYu:p:r:D:P:6:s:t:c:z:M:h:q:U:W:I:G:k:X:R:Z:", longopts, nullptr)) != -1)
+	while ((ch = getopt_long(argc, argv, "BAdeTCxgjwmvaYu:p:r:D:P:6:s:t:c:z:M:h:q:U:W:I:G:k:X:R:Z:", longopts, nullptr)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -876,9 +875,6 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		break;
 	      case 'd':
 		dco = true;
-		break;
-	      case 'f':
-		forceAesCbcCiphersuites = true;
 		break;
 	      case 'g':
 		googleDnsFallback = true;
@@ -991,7 +987,6 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      config.altProxy = altProxy;
 	      config.dco = dco;
 	      config.defaultKeyDirection = defaultKeyDirection;
-	      config.forceAesCbcCiphersuites = forceAesCbcCiphersuites;
 	      config.sslDebugLevel = sslDebugLevel;
 	      config.googleDnsFallback = googleDnsFallback;
 	      config.autologinSessions = autologinSessions;
