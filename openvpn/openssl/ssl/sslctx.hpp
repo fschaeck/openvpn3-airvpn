@@ -60,6 +60,7 @@
 #include <openvpn/ssl/sslapi.hpp>
 #include <openvpn/ssl/ssllog.hpp>
 #include <openvpn/ssl/sni_handler.hpp>
+#include <openvpn/ssl/iana_ciphers.hpp>
 #include <openvpn/openssl/util/error.hpp>
 #include <openvpn/openssl/pki/extpki.hpp>
 #include <openvpn/openssl/pki/x509.hpp>
@@ -282,14 +283,21 @@ namespace openvpn {
 	TLSCertProfile::apply_override(tls_cert_profile, override);
       }
 
+      virtual void set_tls_cipher_list(const std::string& override)
+      {
+	if(!override.empty())
+	  tls_cipher_list = override;
+      }
+
+      virtual void set_tls_ciphersuite_list(const std::string& override)
+      {
+	if(!override.empty())
+	  tls_ciphersuite_list = override;
+      }
+
       void set_local_cert_enabled(const bool v) override
       {
 	local_cert_enabled = v;
-      }
-
-      void set_force_aes_cbc_ciphersuites(const bool v) override
-      {
-	force_aes_cbc_ciphersuites = v;
       }
 
       void set_x509_track(X509Track::ConfigSet x509_track_config_arg) override
@@ -416,6 +424,13 @@ namespace openvpn {
 
 	// parse tls-cert-profile
 	tls_cert_profile = TLSCertProfile::parse_tls_cert_profile(opt, relay_prefix);
+
+	// Overrides for tls cipher suites
+	if (opt.exists("tls-cipher"))
+	  tls_cipher_list = opt.get_optional("tls-cipher", 1, 256);
+
+	if (opt.exists("tls-ciphersuites"))
+	  tls_ciphersuite_list = opt.get_optional("tls-ciphersuites", 1, 256);
 
 	// unsupported cert checkers
 	{
@@ -559,9 +574,10 @@ namespace openvpn {
       VerifyX509Name verify_x509_name;   // --verify-x509-name feature
       TLSVersion::Type tls_version_min{TLSVersion::UNDEF}; // minimum TLS version that we will negotiate
       TLSCertProfile::Type tls_cert_profile{TLSCertProfile::UNDEF};
+      std::string tls_cipher_list;
+      std::string tls_ciphersuite_list;
       X509Track::ConfigSet x509_track_config;
       bool local_cert_enabled = true;
-      bool force_aes_cbc_ciphersuites = false;
       bool client_session_tickets = false;
     };
 
@@ -973,9 +989,45 @@ namespace openvpn {
 #endif
     };
 
-  private:
     /////// start of main class implementation
+    static std::string translate_cipher_list(std::string cipherlist)
+    {
+      // OpenVPN 2.x accepts IANA ciphers instead in the cipher list, we need
+      // to do the same
 
+      std::stringstream cipher_list_ss(cipherlist);
+      std::string ciphersuite;
+
+      std::stringstream result;
+
+
+      while(std::getline(cipher_list_ss, ciphersuite, ':'))
+	{
+	  const tls_cipher_name_pair* pair = tls_get_cipher_name_pair(ciphersuite);
+
+	  if (!result.str().empty())
+	    result << ":";
+
+	  if (pair)
+	    {
+	      if (pair->iana_name != ciphersuite)
+		{
+		  OPENVPN_LOG_SSL("OpenSSLContext: Deprecated cipher suite name '"
+				    << pair->openssl_name << "' please use IANA name ' "
+				    << pair->iana_name << "'");
+		}
+	      result << pair->openssl_name;
+	    }
+	  else
+	    {
+	      result << ciphersuite;
+	    }
+	}
+
+	return result.str();
+    }
+
+  private:
     OpenSSLContext(Config* config_arg)
       : config(config_arg)
     {
@@ -1069,56 +1121,61 @@ namespace openvpn {
 		}
 	    }
 
-	  /* mbed TLS also ignores tls version when force aes cbc cipher suites is on */
-	  if (!config->force_aes_cbc_ciphersuites)
-	    {
-	      if (config->tls_version_min > TLSVersion::V1_0)
-		sslopt |= SSL_OP_NO_TLSv1;
-#             ifdef SSL_OP_NO_TLSv1_1
-		if (config->tls_version_min > TLSVersion::V1_1)
-		  sslopt |= SSL_OP_NO_TLSv1_1;
-#             endif
-#             ifdef SSL_OP_NO_TLSv1_2
-		if (config->tls_version_min > TLSVersion::V1_2)
-		  sslopt |= SSL_OP_NO_TLSv1_2;
-#             endif
-#             ifdef SSL_OP_NO_TLSv1_3
-		if (config->tls_version_min > TLSVersion::V1_3)
-		  sslopt |= SSL_OP_NO_TLSv1_3;
-#             endif
-	    }
+	  if (config->tls_version_min > TLSVersion::V1_0)
+	    sslopt |= SSL_OP_NO_TLSv1;
+#ifdef SSL_OP_NO_TLSv1_1
+	    if (config->tls_version_min > TLSVersion::V1_1)
+	      sslopt |= SSL_OP_NO_TLSv1_1;
+#endif
+#ifdef SSL_OP_NO_TLSv1_2
+	    if (config->tls_version_min > TLSVersion::V1_2)
+	      sslopt |= SSL_OP_NO_TLSv1_2;
+#endif
+#ifdef SSL_OP_NO_TLSv1_3
+	    if (config->tls_version_min > TLSVersion::V1_3)
+	      sslopt |= SSL_OP_NO_TLSv1_3;
+#endif
 	  SSL_CTX_set_options(ctx, sslopt);
 
-	  if (config->force_aes_cbc_ciphersuites)
+#if defined(TLS1_3_VERSION)
+	  if (!config->tls_ciphersuite_list.empty())
 	    {
-	      if (!SSL_CTX_set_cipher_list(ctx, "DHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA"))
-		OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_cipher_list failed for force_aes_cbc_ciphersuites");
+	      if(!SSL_CTX_set_ciphersuites(ctx, config->tls_ciphersuite_list.c_str()))
+		OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_ciphersuites_list failed");
 	    }
-	  else
-	    {
-	      if (!SSL_CTX_set_cipher_list(ctx,
-					   /* default list as a basis */
-					   "DEFAULT"
-					   /* Disable export ciphers, low and medium */
-					   ":!EXP:!LOW:!MEDIUM"
-					   /* Disable static (EC)DH keys (no forward secrecy) */
-					   ":!kDH:!kECDH"
-					   /* Disable DSA private keys */
-					   ":!DSS"
-					   /* Disable RC4 cipher */
-					   ":!RC4"
-					   /* Disable MD5 */
-					   ":!MD5"
-					   /* Disable unsupported TLS modes */
-					   ":!PSK:!SRP:!kRSA"
-					   /* Disable SSLv2 cipher suites*/
-					   ":!SSLv2"
-					   ))
-		  OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_cipher_list failed");
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L && OPENSSL_VERSION_NUMBER < 0x10100000L
-	      SSL_CTX_set_ecdh_auto(ctx, 1); // this method becomes a no-op in OpenSSL 1.1
 #endif
+	  const char* tls_cipher_list =
+	    /* default list as a basis */
+	    "DEFAULT"
+	    /* Disable export ciphers, low and medium */
+	    ":!EXP:!LOW:!MEDIUM"
+	    /* Disable static (EC)DH keys (no forward secrecy) */
+	    ":!kDH:!kECDH"
+	    /* Disable DSA private keys */
+	    ":!DSS"
+	    /* Disable RC4 cipher */
+	    ":!RC4"
+	    /* Disable MD5 */
+	    ":!MD5"
+	    /* Disable unsupported TLS modes */
+	    ":!PSK:!SRP:!kRSA"
+	    /* Disable SSLv2 cipher suites*/
+	    ":!SSLv2";
+
+	  std::string translated_cipherlist;
+
+	  if (!config->tls_cipher_list.empty())
+	    {
+	      translated_cipherlist = translate_cipher_list(config->tls_cipher_list);
+
+	      tls_cipher_list = translated_cipherlist.c_str();
 	    }
+
+	  if (!SSL_CTX_set_cipher_list(ctx, tls_cipher_list))
+	      OPENVPN_THROW(ssl_context_error, "OpenSSLContext: SSL_CTX_set_cipher_list failed");
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && OPENSSL_VERSION_NUMBER < 0x10100000L
+	  SSL_CTX_set_ecdh_auto(ctx, 1); // this method becomes a no-op in OpenSSL 1.1
+#endif
 
 	  /* HAVE_SSL_CTX_SET_SECURITY_LEVEL exists from OpenSSL-1.1.0 up */
 #ifdef HAVE_SSL_CTX_SET_SECURITY_LEVEL

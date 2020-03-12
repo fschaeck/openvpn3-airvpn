@@ -82,6 +82,10 @@
 #include <openvpn/win/winerr.hpp>
 #endif
 
+#ifdef SIMULATE_HTTPCLI_FAILURES // debugging -- simulate network failures
+#include <openvpn/common/periodic_fail.hpp>
+#endif
+
 namespace openvpn {
   namespace WS {
     namespace Client {
@@ -111,6 +115,7 @@ namespace openvpn {
 	  E_KEEPALIVE_TIMEOUT,
 	  E_SHUTDOWN,
 	  E_ABORTED,
+	  E_BOGON, // simulated fault injection for testing
 
 	  N_ERRORS
 	};
@@ -137,6 +142,7 @@ namespace openvpn {
 	    "E_KEEPALIVE_TIMEOUT",
 	    "E_SHUTDOWN",
 	    "E_ABORTED",
+	    "E_BOGON",
 	  };
 
 	  static_assert(N_ERRORS == array_size(error_names), "HTTP error names array inconsistency");
@@ -574,6 +580,20 @@ namespace openvpn {
 	    throw http_client_exception("frame undefined");
 	}
 
+#ifdef SIMULATE_HTTPCLI_FAILURES // debugging -- simulate network failures
+	bool inject_fault(const char *caller)
+	{
+	  if (periodic_fail.trigger("httpcli", SIMULATE_HTTPCLI_FAILURES))
+	    {
+	      OPENVPN_LOG("HTTPCLI BOGON on " << host.host_port_str() << " (" << caller << ')');
+	      error_handler(Status::E_BOGON, caller);
+	      return true;
+	    }
+	  else
+	    return false;
+	}
+#endif
+
 	void activity(const bool init)
 	{
 	  const Time now = Time::now();
@@ -723,6 +743,11 @@ namespace openvpn {
 	  if (halt)
 	    return;
 
+#ifdef SIMULATE_HTTPCLI_FAILURES // debugging -- simulate network failures
+	  if (inject_fault("resolve_callback"))
+	      return;
+#endif
+
 	  if (error)
 	    {
 	      asio_error_handler(Status::E_RESOLVE, "resolve_callback", error);
@@ -761,6 +786,11 @@ namespace openvpn {
 	  if (halt)
 	    return;
 
+#ifdef SIMULATE_HTTPCLI_FAILURES // debugging -- simulate network failures
+	  if (inject_fault("handle_tcp_connect"))
+	      return;
+#endif
+
 	  if (error)
 	    {
 	      asio_error_handler(Status::E_CONNECT, "handle_tcp_connect", error);
@@ -781,6 +811,11 @@ namespace openvpn {
 	{
 	  if (halt)
 	    return;
+
+#ifdef SIMULATE_HTTPCLI_FAILURES // debugging -- simulate network failures
+	  if (inject_fault("handle_unix_connect"))
+	      return;
+#endif
 
 	  if (error)
 	    {
@@ -1065,14 +1100,19 @@ namespace openvpn {
 	    return false;
 
 	  try {
+#ifdef SIMULATE_HTTPCLI_FAILURES // debugging -- simulate network failures
+	    if (inject_fault("tcp_read_handler"))
+	      return false;
+#endif
 	    activity(false);
 	    tcp_in(b); // call Base
+	    return true;
 	  }
 	  catch (const std::exception& e)
 	    {
 	      handle_exception("tcp_read_handler", e);
+	      return false;
 	    }
-	  return true;
 	}
 
 	void tcp_write_queue_needs_send()
@@ -1149,11 +1189,22 @@ namespace openvpn {
 
 	bool base_link_send(BufferAllocated& buf)
 	{
-	  activity(false);
-	  if (transcli)
-	    return transcli->transport_send(buf);
-	  else
-	    return link->send(buf);
+	  try {
+#ifdef SIMULATE_HTTPCLI_FAILURES // debugging -- simulate network failures
+	    if (inject_fault("base_link_send"))
+	      return false;
+#endif
+	    activity(false);
+	    if (transcli)
+	      return transcli->transport_send(buf);
+	    else
+	      return link->send(buf);
+	  }
+	  catch (const std::exception& e)
+	    {
+	      handle_exception("base_link_send", e);
+	      return false;
+	    }
 	}
 
 	bool base_send_queue_empty()
@@ -1274,6 +1325,10 @@ namespace openvpn {
 
 	bool content_out_hold = true;
 	bool alive = false;
+
+#ifdef SIMULATE_HTTPCLI_FAILURES // debugging -- simulate network failures
+	PeriodicFail periodic_fail;
+#endif
       };
 
       template <typename PARENT>
