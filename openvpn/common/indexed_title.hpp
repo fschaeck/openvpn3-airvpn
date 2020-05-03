@@ -19,38 +19,38 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_BUFFER_ASIOBUF_H
-#define OPENVPN_BUFFER_ASIOBUF_H
+#pragma once
 
-#include <openvpn/io/io.hpp>
+#include <string>
 
-#include <openvpn/buffer/buffer.hpp>
+#include <openvpn/common/size.hpp>
 
 namespace openvpn {
-  class AsioConstBufferSeq2
+
+  // TITLE class for representing an object name and index.
+  // Useful for referring to array indices when generating errors.
+  class IndexedTitle
   {
   public:
-    AsioConstBufferSeq2(const Buffer& b1, const Buffer& b2)
-      : buf{openvpn_io::const_buffer{b1.c_data(), b1.size()},
-	     openvpn_io::const_buffer{b2.c_data(), b2.size()}}
+    IndexedTitle(const char *title, const size_t index)
+      : title_(title),
+	index_(index)
     {
     }
 
-    // Implement the ConstBufferSequence requirements.
-    typedef openvpn_io::const_buffer value_type;
-    typedef const openvpn_io::const_buffer* const_iterator;
-    const openvpn_io::const_buffer* begin() const { return buf; }
-    const openvpn_io::const_buffer* end() const { return buf + 2; }
-
-    const size_t size() const
+    std::string to_string() const
     {
-      return openvpn_io::buffer_size(buf[0])
-	   + openvpn_io::buffer_size(buf[1]);
+      return std::string(title_) + '.' + std::to_string(index_);
+    }
+
+    bool empty() const
+    {
+      return false;
     }
 
   private:
-    const openvpn_io::const_buffer buf[2];
+    const char *title_;
+    size_t index_;
   };
-}
 
-#endif
+}
