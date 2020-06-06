@@ -285,10 +285,7 @@ namespace openvpn {
       // process server/port overrides
       remote_list->set_server_override(config.server_override);
       remote_list->set_port_override(config.port_override);
-
-      // process protocol override, should be called after set_enable_cache
-      remote_list->handle_proto_override(config.proto_override,
-					 http_proxy_options || (alt_proxy && alt_proxy->requires_tcp()));
+      remote_list->set_transport_protocol_override(config.proto_override);
 
       // process remote-random
       if (opt.exists("remote-random"))

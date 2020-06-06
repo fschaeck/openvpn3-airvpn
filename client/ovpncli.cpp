@@ -633,7 +633,7 @@ namespace openvpn {
     {
         CryptoAlgs::lookup(config.cipherOverride);
 
-        OPENVPN_LOG("CIPHER OVERRIDE: " << CryptoAlgs::lookup(config.cipherOverride));
+        OPENVPN_LOG("CIPHER OVERRIDE: " << CryptoAlgs::name(CryptoAlgs::lookup(config.cipherOverride)));
     }  
 
 	// validate IPv6 setting
@@ -667,35 +667,70 @@ namespace openvpn {
 	eval.privateKeyPasswordRequired = cc.privateKeyPasswordRequired();
 	eval.allowPasswordSave = cc.allowPasswordSave();
 	eval.remoteHost = config.serverOverride.empty() ? cc.firstRemoteListItem().host : config.serverOverride;
-	eval.remotePort = cc.firstRemoteListItem().port;
-	eval.remoteProto = cc.firstRemoteListItem().proto;
+	eval.remotePort = config.portOverride.empty() ? cc.firstRemoteListItem().port : config.portOverride;
+	eval.remoteProto = config.protoOverride.empty() ? cc.firstRemoteListItem().proto : config.protoOverride;
 	eval.windowsDriver = cc.windowsDriver();
-
-    RemoteList::Ptr rl = cc.getRemoteList();
 
     eval.remoteList.clear();
 
-    for(size_t i = 0; i < rl->size(); i++)
+    RemoteList::Ptr rl = cc.getRemoteList();
+
+    if(config.serverOverride != "")
     {
-        const RemoteList::Item& item = rl->get_item(i);
+        RemoteList::Item::Ptr item(new RemoteList::Item());
+        RemoteEntry re;
 
-	    RemoteEntry re;
+        rl->clear_remoteList();
 
-	    re.server = item.server_host;
-	    re.port = item.server_port;
-	
-        const char *proto = item.transport_protocol.protocol_to_string();
+        re.server = eval.remoteHost;
+        re.port = eval.remotePort;
+        re.protocol = eval.remoteProto;
+        
+        eval.remoteList.push_back(re);
+        
+        item->server_host = eval.remoteHost;
+        item->server_port = re.port;
+        item->transport_protocol = Protocol::parse(re.protocol, Protocol::NO_SUFFIX);
 
-        if(proto)
+        rl->add_item(item);
+
+        rl->reset_cache();
+    }
+    else
+    {
+        if(rl != nullptr)
         {
-            re.protocol = proto;
+            for(size_t i = 0; i < rl->size(); i++)
+            {
+                RemoteList::Item& item = rl->get_item(i);
+                RemoteEntry re;
+
+                re.server = item.server_host;
+
+                if(config.portOverride != "")
+                    re.port = config.portOverride;
+                else
+                    re.port = item.server_port;
+            
+                const char *proto = item.transport_protocol.protocol_to_string();
+
+                if(config.protoOverride != "")
+                    re.protocol = config.protoOverride;
+                else if(proto)
+                    re.protocol = proto;
+                else
+                    re.protocol = "";
+
+                eval.remoteList.push_back(re);
+
+                item.server_port = re.port;
+                item.transport_protocol = Protocol::parse(re.protocol, Protocol::NO_SUFFIX);
+            }
+
+            rl->reset_cache();
         }
         else
-        {
-            re.protocol = "";
-        }
-
-	    eval.remoteList.push_back(re);
+            OPENVPN_LOG("PARSE CONFIG: remote server list is empty");
     }
 
 	for (ParseClientConfig::ServerList::const_iterator i = cc.serverList().begin(); i != cc.serverList().end(); ++i)
@@ -728,6 +763,7 @@ namespace openvpn {
 	state->private_key_password = config.privateKeyPassword;
 	if (!config.protoOverride.empty())
 	  state->proto_override = Protocol::parse(config.protoOverride, Protocol::NO_SUFFIX);
+
 
     {
         if(!config.cipherOverride.empty())

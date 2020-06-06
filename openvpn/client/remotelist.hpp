@@ -536,6 +536,21 @@ namespace openvpn {
       reset_cache();
     }
 
+    // override all server protocols to proto_override
+    void set_transport_protocol_override(const Protocol& proto_override)
+    {
+        if(!proto_override.defined())
+            return;
+
+        for(auto &item : list)
+        {
+            item->transport_protocol = proto_override;
+            item->res_addr_list.reset();
+        }
+      
+        reset_cache();
+    }
+
     void set_random(const RandomAPI::Ptr& rng_arg)
     {
       rng = rng_arg;
@@ -650,9 +665,19 @@ namespace openvpn {
     // return remote list size
     size_t size() const { return list.size(); }
 
-    const Item& get_item(const size_t index) const
+    Item& get_item(const size_t index) const
     {
       return *list.at(index);
+    }
+
+    void clear_remoteList()
+    {
+        list.clear();
+    }
+
+    void add_item(Item::Ptr item)
+    {
+        list.push_back(item);
     }
 
     // return hostname (or IP address) of current connection entry
