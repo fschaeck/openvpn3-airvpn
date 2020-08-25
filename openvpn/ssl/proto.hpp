@@ -858,28 +858,39 @@ namespace openvpn {
 	out << "IV_VER=" << OPENVPN_VERSION << '\n';
 	out << "IV_PLAT=" << platform_name() << '\n';
 
-        if(dc.ncp_enabled())
-            out << "IV_NCP=2\n"; // negotiable crypto parameters V2
+    if(dc.ncp_enabled())
+        out << "IV_NCP=2\n"; // negotiable crypto parameters V2
 
-        out << "IV_TCPNL=1\n"; // supports TCP non-linear packet ID
-        out << "IV_PROTO=2\n"; // supports op32 and P_DATA_V2
+	out << "IV_TCPNL=1\n"; // supports TCP non-linear packet ID
+	out << "IV_PROTO=6\n"; // supports op32 and P_DATA_V2 and expects a push reply
+	                       // See ssl.h in openvpn2 for detailed documentation of IV_PROTO
 
-        compstr = comp_ctx.peer_info_string();
+	/*
+	 * OpenVPN3 allows to be pushed any cipher that it supports as it
+	 * only implements secure ones and BF-CBC for backwards
+	 * compatibility and generally adopts the concept of the server being
+	 * responsible for sensible choices. Include the cipher here since
+	 * OpenVPN 2.5 will otherwise ignore it and break on conrer cases
+	 * like --cipher AES-128-CBC on client and --data-ciphers "AES-128-CBC"
+	 * on server.
+	 *
+	 */
+	out << "IV_CIPHERS=AES-256-GCM:AES-128-GCM";
+	if (openvpn::AEAD::is_algorithm_supported<SSLLib::CryptoAPI>(CryptoAlgs::CHACHA20_POLY1305))
+	  {
+	   out << ":CHACHA20-POLY1305";
+	  }
 
-        /*
-            * OpenVPN3 allows to be pushed any cipher that it supports as it
-            * only implements secure ones and BF-CBC for backwards
-            * compatibility and generally adopts the concept of the server being
-            * responsible for sensible choices.
-            *
-            * IV_NCP already implies AES-256-GCM and AES-128-GCM, so we will
-            * announce IV_CIPHER if we also support Chacha20-Poly1305
-            */
+	if (openvpn::CryptoAlgs::defined(dc.cipher()) &&
+		      dc.cipher() != CryptoAlgs::AES_128_GCM &&
+		      dc.cipher() != CryptoAlgs::AES_256_GCM &&
+		      dc.cipher() != CryptoAlgs::CHACHA20_POLY1305)
+	  {
+	    out << ":" << openvpn::CryptoAlgs::name(dc.cipher());
+	  }
+	out << "\n";
 
-        if(openvpn::AEAD::is_algorithm_supported<SSLLib::CryptoAPI>(CryptoAlgs::CHACHA20_POLY1305))
-        {
-            out << "IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305\n";
-        }
+	compstr = comp_ctx.peer_info_string();
 
 	if (compstr)
 	  out << compstr;

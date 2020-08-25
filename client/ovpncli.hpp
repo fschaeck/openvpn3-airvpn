@@ -98,6 +98,9 @@ namespace openvpn {
       std::string remotePort;
       std::string remoteProto;
 
+      // cipher in config
+      std::string cipher;
+
       // optional list of user-selectable VPN servers
       std::vector<ServerEntry> serverList;
 
