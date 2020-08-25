@@ -293,6 +293,13 @@ namespace openvpn {
 	  }
 	}
 
+	// cipher
+	{
+	  const Option* o = options.get_ptr("cipher");
+	  if (o)
+	    cipher_ = o->get(1, 256);
+	}
+
 	// protocol configuration
 	{
 	  protoConfig.reset(new ProtoContext::Config());
@@ -448,6 +455,9 @@ namespace openvpn {
     const RemoteList::Ptr getRemoteList() const { return remoteList; }
 
     const std::string& windowsDriver() const { return windowsDriver_; }
+
+    // cipher in config
+    const std::string& cipher() const { return cipher_; }
 
     std::string to_string() const
     {
@@ -730,6 +740,7 @@ namespace openvpn {
     SSLLib::SSLAPI::Config::Ptr sslConfig;
     std::string dev;
     std::string windowsDriver_;
+    std::string cipher_;
   };
 }
 

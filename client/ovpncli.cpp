@@ -669,6 +669,7 @@ namespace openvpn {
 	eval.remoteHost = config.serverOverride.empty() ? cc.firstRemoteListItem().host : config.serverOverride;
 	eval.remotePort = config.portOverride.empty() ? cc.firstRemoteListItem().port : config.portOverride;
 	eval.remoteProto = config.protoOverride.empty() ? cc.firstRemoteListItem().proto : config.protoOverride;
+	eval.cipher = config.cipherOverride.empty() ? cc.cipher() : config.cipherOverride;
 	eval.windowsDriver = cc.windowsDriver();
 
     eval.remoteList.clear();

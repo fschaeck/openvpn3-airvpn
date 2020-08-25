@@ -1,3 +1,8 @@
+Changelog 3.6.5 AirVPN - Release date: 24 July 2020 by ProMIND
+
+- [ProMIND] [2020/08/11] client/ovpncli.hpp: added cipher member to struct EvalConfig
+
+
 Changelog 3.6.4 AirVPN - Release date: 23 May 2020 by ProMIND
 
 - [ProMIND] [2020/05/23] completely changed the logics controlling overrides (server, port and protocol)
