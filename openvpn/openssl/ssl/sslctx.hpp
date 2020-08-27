@@ -685,6 +685,11 @@ namespace openvpn {
 	return ssl_handshake_details(ssl);
       }
 
+      virtual bool export_keying_material(const std::string& label, unsigned char *dest, size_t size) override
+      {
+         return SSL_export_keying_material(ssl, dest, size, label.c_str(), label.size(), nullptr, 0, 0) == 1;
+      }
+
       // Return true if we did a full SSL handshake/negotiation.
       // Return false for cached, reused, or persisted sessions.
       // Also returns false if previously called on this session.
@@ -1175,7 +1180,12 @@ namespace openvpn {
 		  sslopt |= SSL_OP_NO_TICKET;
 		}
 	    }
-
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	if (config->tls_version_min > TLSVersion::V1_0)
+	  {
+	    SSL_CTX_set_min_proto_version(ctx, TLSVersion::toTLSVersion(config->tls_version_min));
+	  }
+#else
 	  if (config->tls_version_min > TLSVersion::V1_0)
 	    sslopt |= SSL_OP_NO_TLSv1;
 #ifdef SSL_OP_NO_TLSv1_1
@@ -1189,6 +1199,7 @@ namespace openvpn {
 #ifdef SSL_OP_NO_TLSv1_3
 	  if (config->tls_version_min > TLSVersion::V1_3)
 	    sslopt |= SSL_OP_NO_TLSv1_3;
+#endif
 #endif
 	  SSL_CTX_set_options(ctx, sslopt);
 
@@ -1367,7 +1378,11 @@ namespace openvpn {
     {
       return config->mode;
     }
- 
+
+    constexpr static bool support_key_material_export()
+    {
+      return true;
+    }
   private:
     // ns-cert-type verification
 

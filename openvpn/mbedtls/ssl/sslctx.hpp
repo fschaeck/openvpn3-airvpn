@@ -754,6 +754,11 @@ namespace openvpn {
 	return "";
       }
 
+      virtual bool export_keying_material(const std::string& label, unsigned char*, size_t size) override
+      {
+	return false; // not implemented in our mbed TLS implementation
+      }
+
       virtual bool did_full_handshake() override
       {
 	return false; // fixme -- not implemented
@@ -1156,6 +1161,11 @@ namespace openvpn {
       erase();
     }
 
+    constexpr static bool support_key_material_export()
+    {
+      /* mbed TLS 2.18+ can support RFC5705 but the API is painful to use */
+      return false;
+    }
   protected:
     MbedTLSContext(Config* config_arg)
       : config(config_arg)
