@@ -78,6 +78,7 @@ namespace openvpn {
 	std::string dev_name;
 	int txqueuelen = 200;
 	bool add_bypass_routes_on_establish = false; // required when not using tunbuilder
+	bool dco = false;
 
 #ifdef HAVE_JSON
 	virtual Json::Value to_json() override
@@ -87,6 +88,7 @@ namespace openvpn {
 	  root["layer"] = Json::Value(layer.str());
 	  root["dev_name"] = Json::Value(dev_name);
 	  root["txqueuelen"] = Json::Value(txqueuelen);
+	  root["dco"] = Json::Value(dco);
 	  return root;
 	};
 
@@ -97,6 +99,7 @@ namespace openvpn {
 	  layer = Layer::from_str(json::get_string(root, "layer", title));
 	  json::to_string(root, dev_name, "dev_name", title);
 	  json::to_int(root, txqueuelen, "txqueuelen", title);
+	  json::to_bool(root, dco, "dco", title);
 	}
 #endif
       };
@@ -114,6 +117,9 @@ namespace openvpn {
 			    bool ipv6,
 			    std::ostream& os)
       {
+	// nothing to do if we reconnect to the same gateway
+	if (connected_gw == address)
+	  return true;
 
 	// remove previous bypass route
 	remove_cmds_bypass_gw->execute(os);
@@ -137,6 +143,38 @@ namespace openvpn {
 	if (!conf)
 	  throw tun_linux_error("missing config");
 
+	int fd = -1;
+	if (!conf->dco)
+	  {
+	    fd = open_tun(conf);
+	  }
+	else
+	  {
+	    // in DCO case device is already opened
+	    tun_iface_name = conf->iface_name;
+	  }
+
+	ActionList::Ptr add_cmds = new ActionList();
+	ActionList::Ptr remove_cmds_new = new ActionListReversed();
+
+	// configure tun properties
+	TUNMETHODS::tun_config(tun_iface_name, pull, nullptr, *add_cmds, *remove_cmds_new, conf->add_bypass_routes_on_establish);
+
+	// execute commands to bring up interface
+	add_cmds->execute(os);
+
+	// tear down old routes
+	remove_cmds->execute(os);
+	std::swap(remove_cmds, remove_cmds_new);
+
+	connected_gw = pull.remote_address.to_string();
+
+	return fd;
+      }
+
+    private:
+      int open_tun(Config* conf)
+      {
 	static const char node[] = "/dev/net/tun";
 	ScopedFD fd(open(node, O_RDWR));
 	if (!fd.defined())
@@ -175,25 +213,12 @@ namespace openvpn {
 	    else
 	      throw tun_tx_queue_len_error(errinfo(errno));
 	  }
-
 	conf->iface_name = ifr.ifr_name;
 	tun_iface_name = ifr.ifr_name;
-
-	ActionList::Ptr add_cmds = new ActionList();
-	ActionList::Ptr remove_cmds_new = new ActionListReversed();
-
-	// configure tun properties
-	TUNMETHODS::tun_config(ifr.ifr_name, pull, nullptr, *add_cmds, *remove_cmds_new, conf->add_bypass_routes_on_establish);
-
-	// execute commands to bring up interface
-	add_cmds->execute(os);
-
-	std::swap(remove_cmds, remove_cmds_new);
 
 	return fd.release();
       }
 
-    private:
       void open_unit(const std::string& name, struct ifreq& ifr, ScopedFD& fd)
       {
 	if (!name.empty())
@@ -226,6 +251,8 @@ namespace openvpn {
 
       ActionList::Ptr remove_cmds_bypass_gw = new ActionList();
       ActionListReversed::Ptr remove_cmds = new ActionListReversed();
+
+      std::string connected_gw;
 
       std::string tun_iface_name; // used to skip tun-based default gw when add bypass route
     };
