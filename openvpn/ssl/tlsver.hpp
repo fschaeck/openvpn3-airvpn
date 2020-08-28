@@ -28,7 +28,6 @@
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/options.hpp>
-#include <openssl/tls1.h>
 
 namespace openvpn {
   namespace TLSVersion {
