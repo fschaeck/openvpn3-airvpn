@@ -231,7 +231,8 @@ namespace openvpn {
     }
 
     // remove trailing \r or \n chars
-    inline void trim_crlf(std::string& str)
+    template <typename STRING>
+    inline void trim_crlf(STRING& str)
     {
       while (ends_with_crlf(str))
 	str.pop_back();
@@ -411,14 +412,20 @@ namespace openvpn {
       return ret;
     }
 
-    // generate a string with spaces
-    inline std::string spaces(int n)
+    // generate a string with n instances of char c
+    inline std::string repeat(const char c, int n)
     {
       std::string ret;
       ret.reserve(n);
       while (n-- > 0)
-	ret += ' ';
+	ret += c;
       return ret;
+    }
+
+    // generate a string with spaces
+    inline std::string spaces(int n)
+    {
+      return repeat(' ', n);
     }
 
     // indent a multiline string

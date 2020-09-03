@@ -260,14 +260,19 @@ namespace openvpn {
 	parent = parent_arg;
       }
 
+      void set_rg_local(bool rg_local_arg)
+      {
+        rg_local = rg_local_arg;
+      }
+
       bool socket_protect(int socket, IP::Addr endpoint) override
       {
 	if (parent)
 	  {
 #if defined(OPENVPN_COMMAND_AGENT) && defined(OPENVPN_PLATFORM_WIN)
-	    return WinCommandAgent::add_bypass_route(endpoint);
+	    return rg_local ? true : WinCommandAgent::add_bypass_route(endpoint);
 #elif defined(OPENVPN_COMMAND_AGENT) && defined(OPENVPN_PLATFORM_MAC)
-	    return UnixCommandAgent::add_bypass_route(endpoint);
+	    return rg_local ? true : UnixCommandAgent::add_bypass_route(endpoint);
 #else
 	    return parent->socket_protect(socket, endpoint.to_string(), endpoint.is_ipv6());
 #endif
@@ -283,6 +288,7 @@ namespace openvpn {
 
     private:
       OpenVPNClient* parent;
+      bool rg_local = false; // do not add bypass route if true
     };
 
     class MyReconnectNotify : public ReconnectNotify
@@ -465,6 +471,9 @@ namespace openvpn {
 	bool echo = false;
 	bool info = false;
 
+	// Ensure that init is called
+	InitProcess::Init init;
+
 	template <typename SESSION_STATS, typename CLIENT_EVENTS>
 	void attach(OpenVPNClient* parent,
 		    openvpn_io::io_context* io_context,
@@ -495,6 +504,8 @@ namespace openvpn {
 
 	  // socket protect
 	  socket_protect.set_parent(parent);
+	  RedirectGatewayFlags rg_flags{ options };
+	  socket_protect.set_rg_local(rg_flags.redirect_gateway_local());
 
 	  // reconnect notifications
 	  reconnect_notify.set_parent(parent);
@@ -597,16 +608,6 @@ namespace openvpn {
 	std::atomic<bool> foreign_thread_ready{false};
       };
     };
-
-    OPENVPN_CLIENT_EXPORT void OpenVPNClient::init_process()
-    {
-      InitProcess::init();
-    }
-
-    OPENVPN_CLIENT_EXPORT void OpenVPNClient::uninit_process()
-    {
-      InitProcess::uninit();
-    }
 
     OPENVPN_CLIENT_EXPORT OpenVPNClient::OpenVPNClient()
     {
