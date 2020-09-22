@@ -608,19 +608,8 @@ namespace openvpn {
 		// send the Connected event
 		cli_events->add_event(connected_);
 
-		// Issue an event if compression is enabled
-		CompressContext::Type comp_type = Base::conf().comp_ctx.type();
-		if (comp_type != CompressContext::NONE
-		    && !CompressContext::is_any_stub(comp_type))
-		{
-		  std::ostringstream msg;
-		  msg << (proto_context_options->is_comp_asym()
-			  ? "Asymmetric compression enabled.  Server may send compressed data."
-			  : "Compression enabled.");
-		  msg << "  This may be a potential security issue.";
-		  ClientEvent::Base::Ptr ev = new ClientEvent::CompressionEnabled(msg.str());
-		  cli_events->add_event(std::move(ev));
-		}
+		// check for proto options
+		check_proto_warnings();
 	      }
 	    else
 	      OPENVPN_LOG("Options continuation...");
@@ -861,9 +850,32 @@ namespace openvpn {
 	    cli_events->add_event(std::move(ev));
 	  }
 
-	if (tls_warnings & SSLAPI::TLS_WARN_NAME_CONSTRAINTS)
+	if (tls_warnings & SSLAPI::TLS_WARN_SIG_SHA1)
 	  {
-	    ClientEvent::Base::Ptr ev = new ClientEvent::Warn("TLS: Your CA contains a 'x509v3 Name Constraints' extension, but its validation is not supported. This might be a security breach, please contact your administrator.");
+	    ClientEvent::Base::Ptr ev = new ClientEvent::Warn("TLS: received certificate signed with SHA1. Please inform your admin to upgrade to a stronger algorithm. Support for SHA1 signatures will be dropped in the future");
+	    cli_events->add_event(std::move(ev));
+	  }
+      }
+
+      void check_proto_warnings()
+      {
+	if (uses_bs64_cipher())
+	  {
+	    ClientEvent::Base::Ptr ev = new ClientEvent::Warn("Proto: Using a 64-bit block cipher that is vulnerable to the SWEET32 attack. Please inform your admin to upgrade to a stronger algorithm. Support for 64-bit block cipher will be dropped in the future.");
+	    cli_events->add_event(std::move(ev));
+	  }
+
+	// Issue an event if compression is enabled
+	CompressContext::Type comp_type = Base::conf().comp_ctx.type();
+	if (comp_type != CompressContext::NONE
+	  && !CompressContext::is_any_stub(comp_type))
+	  {
+	    std::ostringstream msg;
+	    msg << (proto_context_options->is_comp_asym()
+		    ? "Asymmetric compression enabled.  Server may send compressed data."
+		    : "Compression enabled.");
+	    msg << "  This may be a potential security issue.";
+	    ClientEvent::Base::Ptr ev = new ClientEvent::CompressionEnabled(msg.str());
 	    cli_events->add_event(std::move(ev));
 	  }
       }

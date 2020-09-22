@@ -50,48 +50,70 @@ A simple command-line wrapper for the API is provided in
 Building the OpenVPN 3 client on Linux
 --------------------------------------
 
-These instructions were tested on Ubuntu 16.
+These instructions were tested on Ubuntu 20.
 
-Get prerequisites to allow for either mbedTLS or OpenSSL linkage::
+Prepare directory structure::
 
-  $ sudo apt-get install g++ make libmbedtls-dev libssl-dev liblz4-dev
-
-Get Asio C++ library::
-
-  $ cd ~
-  $ git clone https://github.com/chriskohlhoff/asio.git
-
-Set environmental variable used by OpenVPN 3 build scripts::
-
-  $ export O3=~/ovpn3
+  $ sudo apt install g++ make libmbedtls-dev libssl-dev liblz4-dev cmake
+  $ export O3=~/O3 && mkdir $O3
+  $ export DEP_DIR=$O3/deps && mkdir $DEP_DIR
+  $ export DL=$O3/dl && mkdir $DL
 
 Clone the OpenVPN 3 source repo::
 
-  $ mkdir ~/ovpn3
-  $ cd ~/ovpn3
+  $ cd $O3
   $ git clone https://github.com/OpenVPN/openvpn3.git core
 
-Build the OpenVPN 3 client wrapper (cli) with mbedTLS crypto/ssl library
-and LZ4 compression::
+Build dependencies::
 
-  $ cd $O3/core/test/ovpncli
-  $ ECHO=1 PROF=linux ASIO_DIR=~/asio MTLS_SYS=1 LZ4_SYS=1 NOSSL=1 $O3/core/scripts/build cli
+  $ cd core/scripts/linux/
+  $ ./build-all
 
-Or alternatively build with OpenSSL::
+Build the OpenVPN 3 client wrapper (cli) with OpenSSL library::
 
-  $ cd $O3/core/test/ovpncli
-  $ ECHO=1 PROF=linux ASIO_DIR=~/asio OPENSSL_SYS=1 LZ4_SYS=1 $O3/core/scripts/build cli
+  $ cd $O3/core && mkdir build && cd build
+  $ cmake ..
+  $ cmake --build .
+
+To use mbedTLS, use `cmake -DUSE_MBEDTLS=on ..`.
 
 Run OpenVPN 3 client::
 
-  $ sudo ./cli -a -c yes myprofile.ovpn route-nopull
+  $ sudo test/ovpncli/ovpncli myprofile.ovpn route-nopull
 
 Options used::
 
-  -a             : use autologin sessions, if supported
-  -c yes         : negotiate LZ4 compression
   myprofile.ovpn : OpenVPN config file (must have .ovpn extension)
   route-nopull   : if you are connected via ssh, prevent ssh session lockout
+
+Using cli with ovpn-dco
+.......................
+
+ovpn-dco is a kernel module which handles data channel
+and provides better proformance.
+
+Download, build and install ovpn-dco::
+
+  $ cd $O3
+  $ git clone https://github.com/OpenVPN/ovpn-dco.git
+  $ cd ovpn-dco
+  $ make && sudo make install
+  $ sudo modprobe ovpn-dco
+
+Install core dependencies::
+
+  $ sudo apt install pkg-config libnl-genl-3-dev
+
+Build cli with ovpn-dco support::
+
+  $ cd $O3/core/build
+  $ cmake -DCLI_OVPNDCO=on .. && make
+  $ sudo test/ovpncli/ovpncliovpndco --dco myprofile.ovpn
+
+Options used::
+
+  myprofile.ovpn : OpenVPN config file (must have .ovpn extension)
+  --dco          : enable data channel offload
 
 
 Building the OpenVPN 3 client on Mac OS X
