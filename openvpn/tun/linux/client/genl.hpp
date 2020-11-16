@@ -212,7 +212,7 @@ public:
     auto msg_ptr = create_msg(OVPN_CMD_NEW_KEY);
     auto* msg = msg_ptr.get();
 
-    const int NONCE_LEN = 12;
+    const int NONCE_TAIL_LEN = 8;
 
     struct nlattr *key_dir;
 
@@ -220,20 +220,13 @@ public:
     NLA_PUT_U8(msg, OVPN_ATTR_KEY_SLOT, key_slot);
     NLA_PUT_U16(msg, OVPN_ATTR_KEY_ID, kc->key_id);
     NLA_PUT_U16(msg, OVPN_ATTR_CIPHER_ALG, kc->cipher_alg);
-    if ((kc->cipher_alg == OVPN_CIPHER_ALG_AES_CBC) ||
-        (kc->cipher_alg == OVPN_CIPHER_ALG_NONE)) {
-      NLA_PUT_U16(msg, OVPN_ATTR_HMAC_ALG, kc->hmac_alg);
-    }
 
     key_dir = nla_nest_start(msg, OVPN_ATTR_ENCRYPT_KEY);
     NLA_PUT(msg, OVPN_KEY_DIR_ATTR_CIPHER_KEY, kc->encrypt.cipher_key_size,
             kc->encrypt.cipher_key);
     if (kc->cipher_alg == OVPN_CIPHER_ALG_AES_GCM) {
-      NLA_PUT(msg, OVPN_KEY_DIR_ATTR_NONCE_TAIL, NONCE_LEN,
+      NLA_PUT(msg, OVPN_KEY_DIR_ATTR_NONCE_TAIL, NONCE_TAIL_LEN,
               kc->encrypt.nonce_tail);
-    } else {
-      NLA_PUT(msg, OVPN_KEY_DIR_ATTR_HMAC_KEY, kc->encrypt.hmac_key_size,
-              kc->encrypt.hmac_key);
     }
     nla_nest_end(msg, key_dir);
 
@@ -241,11 +234,8 @@ public:
     NLA_PUT(msg, OVPN_KEY_DIR_ATTR_CIPHER_KEY, kc->decrypt.cipher_key_size,
             kc->decrypt.cipher_key);
     if (kc->cipher_alg == OVPN_CIPHER_ALG_AES_GCM) {
-      NLA_PUT(msg, OVPN_KEY_DIR_ATTR_NONCE_TAIL, NONCE_LEN,
+      NLA_PUT(msg, OVPN_KEY_DIR_ATTR_NONCE_TAIL, NONCE_TAIL_LEN,
               kc->decrypt.nonce_tail);
-    } else {
-      NLA_PUT(msg, OVPN_KEY_DIR_ATTR_HMAC_KEY, kc->decrypt.hmac_key_size,
-              kc->decrypt.hmac_key);
     }
     nla_nest_end(msg, key_dir);
 
