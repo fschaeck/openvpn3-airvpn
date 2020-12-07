@@ -1,6 +1,27 @@
+Changelog 3.6.6 AirVPN - Release date: 7 December 2020 by ProMIND
+
+- [ProMIND] [2020/11/02] openvpn/ssl/proto.hpp: IV_CIPHERS is set to the overridden cipher only
+                         (both from client and/or OpenVPN profile) in order to properly work
+                         with OpenVPN 2.5 IV_CIPHERS specifications. The old method of cipher
+                         overriding by means of negotiable crypto parameters is still supported
+                         in order to maintain compatibility with OpenVPN < 2.5.0
+- [ProMIND] [2020/11/24] openvpn/ssl/proto.hpp: added "data-ciphers" directive to profile config
+                        .ovpn files in order to comply to OpenVPN 2.5 negotiable data cipher
+                         specifications. In case "data-ciphers" is found in the .ovpn file IV_CIPHERS
+                         is assigned to the algorithms found in "data-ciphers". In this specific case,
+                         "cipher" directive is meant as a fallback cipher and, if not already specified
+                         in "data-ciphers", is appended to IV_CIPHERS
+
+
+*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+
 Changelog 3.6.5 AirVPN - Release date: 24 July 2020 by ProMIND
 
-- [ProMIND] [2020/08/11] client/ovpncli.hpp: added cipher member to struct EvalConfig
+- [ProMIND] [2020/07/11] client/ovpncli.hpp: added cipher member to struct EvalConfig
+
+
+*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
 
 Changelog 3.6.4 AirVPN - Release date: 23 May 2020 by ProMIND

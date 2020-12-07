@@ -624,6 +624,7 @@ namespace openvpn {
 
       cli_config->proto_context_options = proto_context_options;
       cli_config->cipher = cipher_override;
+      cli_config->cipher_override = cipher_override;
       cli_config->push_base = push_base;
       cli_config->transport_factory = transport_factory;
       cli_config->tun_factory = tun_factory;

@@ -124,7 +124,8 @@ namespace openvpn {
 	ProtoConfig::Ptr proto_context_config;
 	ProtoContextOptions::Ptr proto_context_options;
     CryptoAlgs::Type cipher = CryptoAlgs::Type::NONE;
-	PushOptionsBase::Ptr push_base;
+    CryptoAlgs::Type cipher_override = CryptoAlgs::Type::NONE;
+    PushOptionsBase::Ptr push_base;
 	TransportClientFactory::Ptr transport_factory;
 	TunClientFactory::Ptr tun_factory;
 	SessionStats::Ptr cli_stats;
@@ -154,9 +155,10 @@ namespace openvpn {
 	  creds(config.creds),
 	  proto_context_options(config.proto_context_options),
       cipher(config.cipher),
+      cipher_override(config.cipher_override),
 	  cli_stats(config.cli_stats),
 	  cli_events(config.cli_events),
-          ncp_disable(config.ncp_disable),
+      ncp_disable(config.ncp_disable),
 	  echo(config.echo),
 	  info(config.info),
 	  autologin_sessions(config.autologin_sessions),
@@ -462,6 +464,7 @@ namespace openvpn {
 	  OPENVPN_LOG("Connecting to " << server_endpoint_render());
 	  Base::set_protocol(transport->transport_protocol());
 	  Base::set_cipher(cipher);
+	  Base::set_cipher_override(cipher_override);
 	  Base::set_ncp_disable(ncp_disable);
 	  Base::start();
 	  Base::flush(true);
@@ -1154,6 +1157,7 @@ namespace openvpn {
       ProtoContextOptions::Ptr proto_context_options;
 
       CryptoAlgs::Type cipher = CryptoAlgs::Type::NONE;
+      CryptoAlgs::Type cipher_override = CryptoAlgs::Type::NONE;
 
       bool first_packet_received_ = false;
       bool sent_push_request = false;

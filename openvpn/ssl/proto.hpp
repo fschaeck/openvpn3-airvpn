@@ -303,9 +303,9 @@ namespace openvpn {
       // Transport protocol, i.e. UDPv4, etc.
       Protocol protocol; // set with set_protocol()
 
-      // Cipher algorithm
-      CryptoAlgs::Type user_selected_cipher = CryptoAlgs::Type::NONE;
-
+      // Cipher override algorithm
+      CryptoAlgs::Type cipher_override = CryptoAlgs::Type::NONE;
+        
       // OSI layer
       Layer layer;
 
@@ -322,6 +322,8 @@ namespace openvpn {
       int key_direction = -1;        // 0, 1, or -1 for bidirectional
 
       bool ncp_disable = false;
+      std::string negotiable_data_ciphers;
+
       TLSCryptFactory::Ptr tls_crypt_factory;
       TLSCryptContext::Ptr tls_crypt_context;
 
@@ -402,8 +404,46 @@ namespace openvpn {
 	  CryptoAlgs::Type cipher = CryptoAlgs::NONE;
 	  CryptoAlgs::Type digest = CryptoAlgs::NONE;
 
+          // negotiable data ciphers (openvpn 2.5)
+          {
+              const Option *o = opt.get_ptr("data-ciphers");
+
+              if(o)
+              {
+                  negotiable_data_ciphers = o->get(1, 128);
+
+                  if(negotiable_data_ciphers.length() > 0)
+                  {
+                      if(negotiable_data_ciphers.find(":") != std::string::npos)
+                      {
+                          size_t pos = 0;
+                          std::string alg, cconf;
+
+                          cconf = negotiable_data_ciphers;
+
+                          while((pos = cconf.find(":")) != std::string::npos)
+                          {
+                              alg = cconf.substr(0, pos);
+
+                              cipher = CryptoAlgs::lookup(alg);
+
+                              cconf.erase(0, pos + 1);
+                          }
+                          
+                          if(cconf.length() > 0)
+                              cipher = CryptoAlgs::lookup(cconf);
+                      }
+                      else
+                          cipher = CryptoAlgs::lookup(negotiable_data_ciphers);
+                  }
+              }
+              else
+                  negotiable_data_ciphers = "";
+          }
+
+
 	  // data channel cipher
-      {
+          {
           const Option *o = opt.get_ptr("cipher");
 
           if(o)
@@ -415,7 +455,7 @@ namespace openvpn {
           }
           else
               cipher = CryptoAlgs::lookup("BF-CBC");
-      }
+          }
 
 	  // data channel HMAC
 	  {
@@ -785,13 +825,17 @@ namespace openvpn {
     void set_cipher(const CryptoAlgs::Type c)
     {
         if(c > CryptoAlgs::Type::NONE && c < CryptoAlgs::Type::SIZE)
-        {
-            user_selected_cipher = c;
-
-            dc.set_cipher(user_selected_cipher);
-        }
+            dc.set_cipher(c);
         else
             proto_option_error("set_cipher: illegal cipher type");
+    }
+
+    void set_cipher_override(const CryptoAlgs::Type c)
+    {
+        if(c >= CryptoAlgs::Type::NONE && c < CryptoAlgs::Type::SIZE)
+            cipher_override = c;
+        else
+            proto_option_error("set_cipher_override: illegal cipher type");
     }
 
     void set_ncp_disable(const bool disabled)
@@ -917,6 +961,32 @@ namespace openvpn {
 
 	out << "IV_TCPNL=1\n"; // supports TCP non-linear packet ID
 	out << "IV_PROTO=" << std::to_string(iv_proto) << '\n';
+
+	/*
+         * ProMIND [24/11/2020}
+         * 
+         * Negotiable data ciphers complying to OpenVPN 2.5 specifications.
+         * In case "data-ciphers" is found in the .ovpn file (internally assigned
+         * to std::string negotiable_data_ciphers, IV_CIPHERS is assigned to the algorithms
+         * found in "data-ciphers". In this specific case, "cipher" directive
+         * (found in dc.cipher()) is meant as a fallback cipher and, if not already
+         * specifiedin "data-ciphers", is appended to IV_CIPHERS
+         */
+
+        out << "IV_CIPHERS=";
+        
+        if(negotiable_data_ciphers.length() > 0 && cipher_override == openvpn::CryptoAlgs::Type::NONE)
+        {
+            out << negotiable_data_ciphers;
+
+            if(negotiable_data_ciphers.find(openvpn::CryptoAlgs::name(dc.cipher(), "AES-256-GCM")) == std::string::npos)
+                out << ":" << openvpn::CryptoAlgs::name(dc.cipher(), "AES-256-GCM");
+        }
+        else
+            out << openvpn::CryptoAlgs::name(dc.cipher(), "AES-256-GCM");
+        
+        out << "\n";
+
 	/*
 	 * OpenVPN3 allows to be pushed any cipher that it supports as it
 	 * only implements secure ones and BF-CBC for backwards
@@ -927,6 +997,7 @@ namespace openvpn {
 	 * on server.
 	 *
 	 */
+        /*
 	out << "IV_CIPHERS=AES-256-GCM:AES-128-GCM";
 	if (openvpn::AEAD::is_algorithm_supported<SSLLib::CryptoAPI>(CryptoAlgs::CHACHA20_POLY1305))
 	  {
@@ -941,6 +1012,7 @@ namespace openvpn {
 	    out << ":" << openvpn::CryptoAlgs::name(dc.cipher());
 	  }
 	out << "\n";
+        */
 
 	compstr = comp_ctx.peer_info_string();
 
@@ -3355,6 +3427,11 @@ namespace openvpn {
     void set_cipher(const CryptoAlgs::Type c)
     {
         config->set_cipher(c);
+    }
+
+    void set_cipher_override(const CryptoAlgs::Type c)
+    {
+        config->set_cipher_override(c);
     }
 
     void set_ncp_disable(const bool n)

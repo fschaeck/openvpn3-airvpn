@@ -434,7 +434,7 @@ namespace openvpn {
 	std::string server_override;
 	std::string port_override;
 	Protocol proto_override;
-    CryptoAlgs::Type cipher_override;
+    CryptoAlgs::Type cipher_override = CryptoAlgs::Type::NONE;
 	IPv6Setting ipv6;
 	int conn_timeout = 0;
 	unsigned int tcp_queue_limit = 64;
@@ -630,12 +630,12 @@ namespace openvpn {
 	  Protocol::parse(config.protoOverride, Protocol::NO_SUFFIX);
 
     // validate cipher_override
-    if(!config.cipherOverride.empty())
+    if(!config.cipherOverrideAlgorithm.empty())
     {
-        CryptoAlgs::lookup(config.cipherOverride);
+        CryptoAlgs::lookup(config.cipherOverrideAlgorithm);
 
-        OPENVPN_LOG("CIPHER OVERRIDE: " << CryptoAlgs::name(CryptoAlgs::lookup(config.cipherOverride)));
-    }  
+        OPENVPN_LOG("CIPHER OVERRIDE: " << CryptoAlgs::name(CryptoAlgs::lookup(config.cipherOverrideAlgorithm)));
+    }
 
 	// validate IPv6 setting
 	if (!config.ipv6.empty())
@@ -670,7 +670,7 @@ namespace openvpn {
 	eval.remoteHost = config.serverOverride.empty() ? cc.firstRemoteListItem().host : config.serverOverride;
 	eval.remotePort = config.portOverride.empty() ? cc.firstRemoteListItem().port : config.portOverride;
 	eval.remoteProto = config.protoOverride.empty() ? cc.firstRemoteListItem().proto : config.protoOverride;
-	eval.cipher = config.cipherOverride.empty() ? cc.cipher() : config.cipherOverride;
+	eval.cipher = config.cipherOverrideAlgorithm.empty() ? cc.cipher() : config.cipherOverrideAlgorithm;
 	eval.windowsDriver = cc.windowsDriver();
 
     eval.remoteList.clear();
@@ -768,8 +768,8 @@ namespace openvpn {
 
 
     {
-        if(!config.cipherOverride.empty())
-            state->cipher_override = CryptoAlgs::lookup(config.cipherOverride);
+        if(!config.cipherOverrideAlgorithm.empty())
+            state->cipher_override = CryptoAlgs::lookup(config.cipherOverrideAlgorithm);
         else
             state->cipher_override = CryptoAlgs::Type::NONE;
     }
