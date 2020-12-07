@@ -86,6 +86,7 @@ namespace openvpn {
 	  case CryptoAlgs::BF_CBC:
       case CryptoAlgs::CHACHA20_POLY1305:
 #ifdef ENABLE_OVPNDCO
+	  case CryptoAlgs::CHACHA20_POLY1305:
 	  case CryptoAlgs::NONE:
 #endif
 	    break;
