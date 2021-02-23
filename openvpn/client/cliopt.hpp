@@ -250,7 +250,7 @@ namespace openvpn {
           tcp_queue_limit = limit;
 
       // route-nopull
-      pushed_options_filter.reset(new PushedOptionsFilter(opt.exists("route-nopull")));
+      pushed_options_filter.reset(new PushedOptionsFilter(opt));
 
       // OpenVPN Protocol context (including SSL)
       cp_main = proto_config(opt, config, pcc, false);
