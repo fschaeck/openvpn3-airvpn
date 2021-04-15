@@ -288,6 +288,10 @@ private:
 	  std::cout << "stateID: " << dc.stateID << std::endl;
 	}
       }
+    else if (ev.name == "PROXY_NEED_CREDS")
+      {
+	std::cout << "PROXY_NEED_CREDS " << ev.info << std::endl;
+      }
     else if (ev.name == "INFO" && (string::starts_with(ev.info, "OPEN_URL:http://")
 				|| string::starts_with(ev.info, "OPEN_URL:https://")))
       {
@@ -1068,6 +1072,17 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		    {
 		      if (!username.empty() || !password.empty())
 			std::cout << "NOTE: creds were not needed" << std::endl;
+
+		      // still provide proxy credentials if given
+		      if (!proxyUsername.empty())
+			{
+			  ClientAPI::ProvideCreds creds;
+			  creds.http_proxy_user = proxyUsername;
+			  creds.http_proxy_pass = proxyPassword;
+			  ClientAPI::Status creds_status = client.provide_creds(creds);
+			  if (creds_status.error)
+			    OPENVPN_THROW_EXCEPTION("creds error: " << creds_status.message);
+			}
 		    }
 		  else
 		    {
@@ -1078,6 +1093,8 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 			password = get_password("Password:");
 		      creds.username = username;
 		      creds.password = password;
+		      creds.http_proxy_user = proxyUsername;
+		      creds.http_proxy_pass = proxyPassword;
 		      creds.response = response;
 		      creds.dynamicChallengeCookie = dynamicChallengeCookie;
 		      creds.replacePasswordWithSessionID = true;

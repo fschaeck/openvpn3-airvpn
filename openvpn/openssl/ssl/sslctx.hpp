@@ -896,7 +896,7 @@ namespace openvpn {
 		if ((EVP_PKEY_id(pkey) == EVP_PKEY_EC) && (EVP_PKEY_get0_EC_KEY(pkey) != nullptr &&
 		  EVP_PKEY_get0_EC_KEY(pkey) != nullptr))
 		  {
-		    EC_KEY* ec = EVP_PKEY_get0_EC_KEY(pkey);
+		    const EC_KEY* ec = EVP_PKEY_get0_EC_KEY(pkey);
 		    const EC_GROUP* group = EC_KEY_get0_group(ec);
 		    const char* curve = nullptr;
 
@@ -1143,6 +1143,10 @@ namespace openvpn {
 
 	  /* Disable SSLv2 and SSLv3, might be a noop but does not hurt */
 	  long sslopt = SSL_OP_SINGLE_DH_USE | SSL_OP_SINGLE_ECDH_USE | SSL_OP_NO_COMPRESSION | SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
+
+#ifdef SSL_OP_NO_RENEGOTIATION
+	  sslopt |= SSL_OP_NO_RENEGOTIATION;
+#endif
 
 	  if (config->mode.is_server())
 	    {
