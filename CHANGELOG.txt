@@ -1,3 +1,11 @@
+Changelog 3.7 AirVPN - Release date: 15 April 2021 by ProMIND
+
+- [ProMIND] [2021/04/15] Synchronization with master
+
+
+*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+
 Changelog 3.6.7 AirVPN - Release date: 9 April 2021 by ProMIND
 
 - [ProMIND] [2021/04/09] client/ovpncli.cpp: enforced check in case no remote IP/server is not
