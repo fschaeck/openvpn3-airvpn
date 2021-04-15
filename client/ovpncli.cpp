@@ -673,67 +673,67 @@ namespace openvpn {
 	eval.cipher = config.cipherOverrideAlgorithm.empty() ? cc.cipher() : config.cipherOverrideAlgorithm;
 	eval.windowsDriver = cc.windowsDriver();
 
-    eval.remoteList.clear();
+        eval.remoteList.clear();
 
-    RemoteList::Ptr rl = cc.getRemoteList();
+        RemoteList::Ptr rl = cc.getRemoteList();
 
-    if(config.serverOverride != "")
-    {
-        RemoteList::Item::Ptr item(new RemoteList::Item());
-        RemoteEntry re;
-
-        rl->clear_remoteList();
-
-        re.server = eval.remoteHost;
-        re.port = eval.remotePort;
-        re.protocol = eval.remoteProto;
-        
-        eval.remoteList.push_back(re);
-        
-        item->server_host = eval.remoteHost;
-        item->server_port = re.port;
-        item->transport_protocol = Protocol::parse(re.protocol, Protocol::NO_SUFFIX);
-
-        rl->add_item(item);
-
-        rl->reset_cache();
-    }
-    else
-    {
         if(rl != nullptr)
         {
-            for(size_t i = 0; i < rl->size(); i++)
+            if(config.serverOverride != "")
             {
-                RemoteList::Item& item = rl->get_item(i);
+                RemoteList::Item::Ptr item(new RemoteList::Item());
                 RemoteEntry re;
 
-                re.server = item.server_host;
+                rl->clear_remoteList();
 
-                if(config.portOverride != "")
-                    re.port = config.portOverride;
-                else
-                    re.port = item.server_port;
-            
-                const char *proto = item.transport_protocol.protocol_to_string();
-
-                if(config.protoOverride != "")
-                    re.protocol = config.protoOverride;
-                else if(proto)
-                    re.protocol = proto;
-                else
-                    re.protocol = "";
-
+                re.server = eval.remoteHost;
+                re.port = eval.remotePort;
+                re.protocol = eval.remoteProto;
+                
                 eval.remoteList.push_back(re);
+                
+                item->server_host = eval.remoteHost;
+                item->server_port = re.port;
+                item->transport_protocol = Protocol::parse(re.protocol, Protocol::NO_SUFFIX);
 
-                item.server_port = re.port;
-                item.transport_protocol = Protocol::parse(re.protocol, Protocol::NO_SUFFIX);
+                rl->add_item(item);
+
+                rl->reset_cache();
             }
+            else
+            {
+                for(size_t i = 0; i < rl->size(); i++)
+                {
+                    RemoteList::Item& item = rl->get_item(i);
+                    RemoteEntry re;
 
-            rl->reset_cache();
+                    re.server = item.server_host;
+
+                    if(config.portOverride != "")
+                        re.port = config.portOverride;
+                    else
+                        re.port = item.server_port;
+                
+                    const char *proto = item.transport_protocol.protocol_to_string();
+
+                    if(config.protoOverride != "")
+                        re.protocol = config.protoOverride;
+                    else if(proto)
+                        re.protocol = proto;
+                    else
+                        re.protocol = "";
+
+                    eval.remoteList.push_back(re);
+
+                    item.server_port = re.port;
+                    item.transport_protocol = Protocol::parse(re.protocol, Protocol::NO_SUFFIX);
+                }
+
+                rl->reset_cache();
+            }
         }
         else
             OPENVPN_LOG("PARSE CONFIG: remote server list is empty");
-    }
 
 	for (ParseClientConfig::ServerList::const_iterator i = cc.serverList().begin(); i != cc.serverList().end(); ++i)
 	  {

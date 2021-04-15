@@ -202,7 +202,7 @@ namespace openvpn {
 	      if (ri->transport_protocol.is_udp())
 		firstRemoteListItem_.proto = "udp";
 	      else if (ri->transport_protocol.is_tcp())
-		firstRemoteListItem_.proto = "tcp-client";
+		firstRemoteListItem_.proto = "tcp";
 	    }
 	}
 

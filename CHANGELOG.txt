@@ -1,3 +1,14 @@
+Changelog 3.6.7 AirVPN - Release date: 9 April 2021 by ProMIND
+
+- [ProMIND] [2021/04/09] client/ovpncli.cpp: enforced check in case no remote IP/server is not
+                         specified in the profile
+- [ProMIND] [2021/04/13] openvpn/client/cliopthelper.hpp: firstRemoteListItem_.proto is now assigned to
+                         "tcp" instead of "tcp-client"
+
+
+*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+
 Changelog 3.6.6 AirVPN - Release date: 7 December 2020 by ProMIND
 
 - [ProMIND] [2020/11/02] openvpn/ssl/proto.hpp: IV_CIPHERS is set to the overridden cipher only
