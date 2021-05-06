@@ -8,8 +8,8 @@ Changelog 3.7 AirVPN - Release date: 15 April 2021 by ProMIND
 
 Changelog 3.6.7 AirVPN - Release date: 9 April 2021 by ProMIND
 
-- [ProMIND] [2021/04/09] client/ovpncli.cpp: enforced check in case no remote IP/server is not
-                         specified in the profile
+- [ProMIND] [2021/04/09] client/ovpncli.cpp: enforced check in case no remote IP/server is specified
+                         in the profile
 - [ProMIND] [2021/04/13] openvpn/client/cliopthelper.hpp: firstRemoteListItem_.proto is now assigned to
                          "tcp" instead of "tcp-client"
 

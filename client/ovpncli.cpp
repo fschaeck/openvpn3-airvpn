@@ -435,6 +435,7 @@ namespace openvpn {
 	std::string port_override;
 	Protocol proto_override;
     CryptoAlgs::Type cipher_override = CryptoAlgs::Type::NONE;
+	IP::Addr::Version proto_version_override;
 	IPv6Setting ipv6;
 	int conn_timeout = 0;
 	unsigned int tcp_queue_limit = 64;
@@ -766,7 +767,6 @@ namespace openvpn {
 	if (!config.protoOverride.empty())
 	  state->proto_override = Protocol::parse(config.protoOverride, Protocol::NO_SUFFIX);
 
-
     {
         if(!config.cipherOverrideAlgorithm.empty())
             state->cipher_override = CryptoAlgs::lookup(config.cipherOverrideAlgorithm);
@@ -774,7 +774,12 @@ namespace openvpn {
             state->cipher_override = CryptoAlgs::Type::NONE;
     }
 
-	if (!config.ipv6.empty())
+	if (config.protoVersionOverride == 4)
+	  state->proto_version_override = IP::Addr::Version::V4;
+	else if (config.protoVersionOverride == 6)
+	  state->proto_version_override = IP::Addr::Version::V6;
+
+    if (!config.ipv6.empty())
 	  state->ipv6 = IPv6Setting::parse(config.ipv6);
 	if (!config.compressionMode.empty())
 	  state->proto_context_options->parse_compression_mode(config.compressionMode);
@@ -1053,6 +1058,7 @@ namespace openvpn {
       cc.port_override = state->port_override;
       cc.proto_override = state->proto_override;
       cc.cipher_override = state->cipher_override;
+      cc.proto_version_override = state->proto_version_override;
       cc.ipv6 = state->ipv6;
       cc.conn_timeout = state->conn_timeout;
       cc.tun_persist = state->tun_persist;

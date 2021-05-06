@@ -128,6 +128,7 @@ namespace openvpn {
       std::string platform_version;
       Protocol proto_override;
       CryptoAlgs::Type cipher_override = CryptoAlgs::Type::NONE;
+      IP::Addr::Version proto_version_override = IP::Addr::Version::UNSPEC;
       IPv6Setting ipv6;
       int conn_timeout = 0;
       unsigned int tcp_queue_limit = 64;
@@ -282,10 +283,15 @@ namespace openvpn {
       // reconnections.
       remote_list->set_enable_cache(config.tun_persist);
 
-      // process server/port overrides
+      // process server/port/family overrides
       remote_list->set_server_override(config.server_override);
       remote_list->set_port_override(config.port_override);
       remote_list->set_transport_protocol_override(config.proto_override);
+      remote_list->set_proto_version_override(config.proto_version_override);
+
+      // process protocol override, should be called after set_enable_cache
+      remote_list->handle_proto_override(config.proto_override,
+					 http_proxy_options || (alt_proxy && alt_proxy->requires_tcp()));
 
       // process remote-random
       if (opt.exists("remote-random"))
