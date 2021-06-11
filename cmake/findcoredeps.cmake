@@ -47,6 +47,7 @@ function(add_core_dependencies target)
                 -D_WIN32_WINNT=0x0600
                 -DTAP_WIN_COMPONENT_ID=tap0901
                 -D_CRT_SECURE_NO_WARNINGS
+                -DASIO_DISABLE_LOCAL_SOCKETS
                 )
         set(EXTRA_LIBS fwpuclnt.lib iphlpapi.lib wininet.lib setupapi.lib rpcrt4.lib wtsapi32.lib)
         if ("${CMAKE_GENERATOR_PLATFORM}" STREQUAL "ARM64")
@@ -140,6 +141,12 @@ function (add_json_library target)
         target_link_libraries(${target} jsoncpp_lib)
         target_compile_definitions(${target} PRIVATE -DHAVE_JSONCPP)
         message("Adding jsoncpp to " ${target})
+    elseif (APPLE)
+        set(PLAT ${OPENVPN_PLAT})
+        set(JSONCPP_DIR ${DEP_DIR}/jsoncpp/jsoncpp-${PLAT})
+        target_include_directories(${target} PRIVATE ${JSONCPP_DIR}/include)
+        target_compile_definitions(${target} PRIVATE -DHAVE_JSONCPP)
+        target_link_libraries(${target} ${JSONCPP_DIR}/lib/libjsoncpp.a)
     else ()
         find_package(PkgConfig REQUIRED)
         if (MINGW)

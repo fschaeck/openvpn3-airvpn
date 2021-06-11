@@ -137,8 +137,8 @@ namespace openvpn {
       ProtoContextOptions::Ptr proto_context_options;
       HTTPProxyTransport::Options::Ptr http_proxy_options;
       bool alt_proxy = false;
-      bool dco = false;
       bool ncp_disable = false;
+      bool dco = true;
       bool echo = false;
       bool info = false;
       bool tun_persist = false;
@@ -233,9 +233,6 @@ namespace openvpn {
 #if (defined(ENABLE_KOVPN) || defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_EXTERNAL_TUN_FACTORY)
       if (config.dco)
 	dco = DCOTransport::new_controller();
-#else
-      if (config.dco)
-	throw option_error("DCO not enabled in this build");
 #endif
 
       // frame
