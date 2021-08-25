@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2020 OpenVPN Inc.
+//    Copyright (C) 2012-2021 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -17,32 +17,34 @@
 //
 //    You should have received a copy of the GNU Affero General Public License
 //    along with this program in the COPYING file.
-//    If not, see <http://www.gnu.org/licenses/>.
 
-#pragma once
+#include "test_common.h"
 
-// loose emulation of std::clamp for pre-C++17
+#include <openvpn/buffer/safestr.hpp>
 
-namespace openvpn {
+using namespace openvpn;
 
-  template <typename T>
-  T clamp(T value, T low, T high)
-  {
-    if (value < low)
-      return low;
-    else if (value > high)
-      return high;
-    else
-      return value;
-  }
+static void compare(const SafeString& s1, const SafeString& s2, const bool expect_eq)
+{
+  ASSERT_EQ(s1 == s2.c_str(), expect_eq);
+  ASSERT_NE(s1 != s2.c_str(), expect_eq);
+  ASSERT_EQ(s1 == s2.to_string(), expect_eq);
+  ASSERT_NE(s1 != s2.to_string(), expect_eq);
+}
 
-  // like clamp() above, but only clamp non-zero values
-  template <typename T>
-  T clamp_nonzero(T value, T low, T high)
-  {
-    if (value)
-      return clamp(value, low, high);
-    else
-      return value;
-  }
+TEST(safestr, test_1)
+{
+  SafeString a("mybigsecret");
+  SafeString b("mybigsekret");
+  SafeString c("mybigsekrets");
+  SafeString a2("mybigsecret");
+
+  compare(a, a2, true);
+  compare(a2, a, true);
+  compare(a, b, false);
+  compare(a, c, false);
+  compare(b, c, false);
+  compare(b, a, false);
+  compare(c, a, false);
+  compare(c, b, false);
 }

@@ -24,6 +24,7 @@
 #include <openvpn/io/io.hpp>
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/hexstr.hpp>
+#include <openvpn/common/format.hpp>
 #include <openvpn/random/mtrandapi.hpp>
 
 #include <iostream>
@@ -130,6 +131,28 @@ namespace openvpn {
     Log::Context log_context;
     Log::Context::Wrapper log_wrap; // must be constructed after log_context
   };
+
+  // When a test steps on Log::global_log, save and restore previous
+  // Log::global_log so as not to mess up other tests when running a
+  // multiple-compilation-unit build.
+  class SaveCurrentLogObject
+  {
+  public:
+    SaveCurrentLogObject()
+    {
+      saved_log = Log::global_log;
+      Log::global_log = nullptr;
+    }
+
+    ~SaveCurrentLogObject()
+    {
+      Log::global_log = saved_log;
+    }
+
+  private:
+    OPENVPN_LOG_CLASS *saved_log;
+  };
+
 }
 
 extern openvpn::LogOutputCollector* testLog;
@@ -189,6 +212,20 @@ inline std::string getTempDirPath(const std::string& fn)
 #endif
 
 /**
+ * Returns a string joined with the delimiter
+ * @param r the array to join
+ * @param delim the delimiter to use
+ * @return A string joined by delim from the vector r
+ */
+template<class T>
+inline std::string getJoinedString(const std::vector<T>& r, const std::string& delim = "|")
+{
+  std::stringstream s;
+  std::copy(r.begin(), r.end(), std::ostream_iterator<std::string>(s, delim.c_str()));
+  return s.str();
+}
+
+/**
  * Returns a sorted string join with the delimiter
  * This function modifes the input
  * @param r the array to join
@@ -199,9 +236,7 @@ template<class T>
 inline std::string getSortedJoinedString(std::vector<T>& r, const std::string& delim = "|")
 {
   std::sort(r.begin(), r.end());
-  std::stringstream s;
-  std::copy(r.begin(), r.end(), std::ostream_iterator<std::string>(s, delim.c_str()));
-  return s.str();
+  return getJoinedString(r, delim);
 }
 
 namespace detail {
@@ -397,3 +432,6 @@ do { \
   if ((v1) < (v2)) \
     OPENVPN_THROW_EXCEPTION("JY_ASSERT_GE: failure at " << __FILE__ << ':' << __LINE__); \
 } while (0)
+
+// Convenience macro for throwing exceptions
+#define THROW_FMT(...) throw Exception(printfmt(__VA_ARGS__))
