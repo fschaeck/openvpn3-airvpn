@@ -8,7 +8,7 @@ OpenVPN 3 AirVPN is a direct fork of the official master project (https://github
 * added ncp disable override to client configuration
 * added tcp-queue-limit override to client configuration
 * added ncp-disable option in openvpn profile
-* added data-cipher option in openvpn profile in order to comply to OpenVPN 2.5
+* added data-ciphers option in openvpn profile in order to comply to OpenVPN 2.5
   new negotiable data cipher specifications
 * added support for DNS push ignore to Tunnel Builder
 * bug fixes and new features

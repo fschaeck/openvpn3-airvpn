@@ -80,7 +80,14 @@ public:
   DCO::TransportConfig transport;
   DCO::TunConfig tun;
 
+  bool allow_local_dns_resolvers = false;
+
   unsigned int ping_restart_override = 0;
+
+  void process_push(const OptionList& opt) override
+  {
+    transport.remote_list->process_push(opt);
+  }
 
   virtual TunClientFactory::Ptr
   new_tun_factory(const DCO::TunConfig &conf, const OptionList &opt) override {
@@ -120,7 +127,13 @@ public:
   new_transport_client_obj(openvpn_io::io_context &io_context,
                            TransportClientParent *parent) override;
 
-  static DCO::Ptr new_controller() { return new ClientConfig(); }
+  static DCO::Ptr new_controller(TunBuilderBase* tb)
+  {
+    auto ctrl = new ClientConfig();
+    if (ctrl)
+      ctrl->builder = tb;
+    return ctrl;
+  }
 
 protected:
   ClientConfig() = default;
@@ -231,7 +244,7 @@ protected:
 
 #ifdef ENABLE_KOVPN
 #include <openvpn/kovpn/kovpncli.hpp>
-inline DCO::Ptr new_controller() { return KovpnClientConfig::new_controller(); }
+inline DCO::Ptr new_controller(TunBuilderBase*) { return KovpnClientConfig::new_controller(); }
 inline TransportClient::Ptr
 ClientConfig::new_transport_client_obj(openvpn_io::io_context &io_context,
                                        TransportClientParent *parent) {
@@ -239,8 +252,8 @@ ClientConfig::new_transport_client_obj(openvpn_io::io_context &io_context,
 }
 #elif ENABLE_OVPNDCO
 #include <openvpn/dco/ovpndcocli.hpp>
-inline DCO::Ptr new_controller() {
-  if (!OvpnDcoClient::available())
+inline DCO::Ptr new_controller(TunBuilderBase* tb) {
+  if (!OvpnDcoClient::available(tb))
     return nullptr;
 
   CryptoAlgs::allow_dc_algs({
@@ -249,7 +262,7 @@ inline DCO::Ptr new_controller() {
     CryptoAlgs::AES_192_GCM,
     CryptoAlgs::AES_256_GCM
   });
-  return ClientConfig::new_controller();
+  return ClientConfig::new_controller(tb);
 }
 inline TransportClient::Ptr
 ClientConfig::new_transport_client_obj(openvpn_io::io_context &io_context,
@@ -258,7 +271,7 @@ ClientConfig::new_transport_client_obj(openvpn_io::io_context &io_context,
 }
 #elif ENABLE_OVPNDCOWIN
 #include <openvpn/dco/ovpndcowincli.hpp>
-inline DCO::Ptr new_controller() {
+inline DCO::Ptr new_controller(TunBuilderBase* tb) {
   if (!OvpnDcoWinClient::available())
     return nullptr;
 
@@ -267,7 +280,7 @@ inline DCO::Ptr new_controller() {
     CryptoAlgs::AES_192_GCM,
     CryptoAlgs::AES_256_GCM
   });
-  return ClientConfig::new_controller();
+  return ClientConfig::new_controller(nullptr);
 }
 inline TransportClient::Ptr
 ClientConfig::new_transport_client_obj(openvpn_io::io_context& io_context,

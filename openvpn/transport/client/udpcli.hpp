@@ -62,8 +62,13 @@ namespace openvpn {
 	return new ClientConfig;
       }
 
-      virtual TransportClient::Ptr new_transport_client_obj(openvpn_io::io_context& io_context,
-							    TransportClientParent* parent);
+      TransportClient::Ptr new_transport_client_obj(openvpn_io::io_context& io_context,
+						    TransportClientParent* parent) override;
+
+      void process_push(const OptionList& opt) override
+      {
+	remote_list->process_push(opt);
+      }
 
     private:
       ClientConfig()

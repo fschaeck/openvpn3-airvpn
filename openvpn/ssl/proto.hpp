@@ -3814,8 +3814,8 @@ namespace openvpn {
     {
     }
 
-    // Called when initial KeyContext transitions to ACTIVE state
-    virtual void active()
+    // Called when KeyContext transitions to ACTIVE state
+    virtual void active(bool primary)
     {
     }
 
@@ -3959,7 +3959,7 @@ namespace openvpn {
 	    case KeyContext::KEV_ACTIVE:
 	      OPENVPN_LOG_PROTO_VERBOSE(debug_prefix() << " SESSION_ACTIVE");
 	      primary->rekey(CryptoDCInstance::ACTIVATE_PRIMARY);
-	      active();
+	      active(true);
 	      break;
 	    case KeyContext::KEV_RENEGOTIATE:
 	    case KeyContext::KEV_RENEGOTIATE_FORCE:
@@ -3997,6 +3997,7 @@ namespace openvpn {
 	      secondary->rekey(CryptoDCInstance::NEW_SECONDARY);
 	      if (primary)
 		primary->prepare_expire();
+	      active(false);
 	      break;
 	    case KeyContext::KEV_BECOME_PRIMARY:
 	      if (!secondary->invalidated())

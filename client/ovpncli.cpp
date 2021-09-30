@@ -442,6 +442,7 @@ namespace openvpn {
 	bool ncp_disable = false;
 	bool tun_persist = false;
 	bool wintun = false;
+	bool allow_local_dns_resolvers = false;
 	bool google_dns_fallback = false;
 	bool synchronous_dns_lookup = false;
 	bool autologin_sessions = false;
@@ -705,17 +706,17 @@ namespace openvpn {
             {
                 for(size_t i = 0; i < rl->size(); i++)
                 {
-                    RemoteList::Item& item = rl->get_item(i);
+                    RemoteList::Item::Ptr item = rl->get_item(i);
                     RemoteEntry re;
 
-                    re.server = item.server_host;
+                    re.server = item->server_host;
 
                     if(config.portOverride != "")
                         re.port = config.portOverride;
                     else
-                        re.port = item.server_port;
+                        re.port = item->server_port;
                 
-                    const char *proto = item.transport_protocol.protocol_to_string();
+                    const char *proto = item->transport_protocol.protocol_to_string();
 
                     if(config.protoOverride != "")
                         re.protocol = config.protoOverride;
@@ -726,8 +727,8 @@ namespace openvpn {
 
                     eval.remoteList.push_back(re);
 
-                    item.server_port = re.port;
-                    item.transport_protocol = Protocol::parse(re.protocol, Protocol::NO_SUFFIX);
+                    item->server_port = re.port;
+                    item->transport_protocol = Protocol::parse(re.protocol, Protocol::NO_SUFFIX);
                 }
 
                 rl->reset_cache();
@@ -759,6 +760,7 @@ namespace openvpn {
 	state->conn_timeout = config.connTimeout;
 	state->tun_persist = config.tunPersist;
 	state->wintun = config.wintun;
+	state->allow_local_dns_resolvers = config.allowLocalDnsResolvers;
 	state->google_dns_fallback = config.googleDnsFallback;
 	state->synchronous_dns_lookup = config.synchronousDnsLookup;
 	state->autologin_sessions = config.autologinSessions;
@@ -1063,6 +1065,7 @@ namespace openvpn {
       cc.conn_timeout = state->conn_timeout;
       cc.tun_persist = state->tun_persist;
       cc.wintun = state->wintun;
+      cc.allow_local_dns_resolvers = state->allow_local_dns_resolvers;
       cc.google_dns_fallback = state->google_dns_fallback;
       cc.synchronous_dns_lookup = state->synchronous_dns_lookup;
       cc.autologin_sessions = state->autologin_sessions;
