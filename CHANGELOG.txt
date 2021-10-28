@@ -1,3 +1,11 @@
+Changelog 3.7.1 AirVPN - Release date: XX XXX 2021 by ProMIND
+
+- [ProMIND] [2021/09/30] client/ovpncli.cpp: added method ssl_library_version
+
+
+*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+
 Changelog 3.7 AirVPN - Release date: 15 April 2021 by ProMIND
 
 - [ProMIND] [2021/04/15] Synchronization with master

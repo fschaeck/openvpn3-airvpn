@@ -622,6 +622,9 @@ namespace openvpn {
       // Returns core copyright
       static std::string copyright();
 
+      // Returns SSL version
+      static std::string ssl_library_version();
+
       // Hide protected methods/data from SWIG
 #ifdef SWIGJAVA
     private:

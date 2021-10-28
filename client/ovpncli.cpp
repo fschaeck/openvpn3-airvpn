@@ -1504,6 +1504,11 @@ namespace openvpn {
       return openvpn_copyright;
     }
 
+    OPENVPN_CLIENT_EXPORT std::string OpenVPNClient::ssl_library_version()
+    {
+      return get_ssl_library_version();
+    }
+
     OPENVPN_CLIENT_EXPORT std::string OpenVPNClient::platform()
     {
       std::string ret = platform_string();
