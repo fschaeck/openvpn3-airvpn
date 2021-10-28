@@ -41,7 +41,7 @@
 #include <openvpn/crypto/cryptodcsel.hpp>
 #include <openvpn/ssl/mssparms.hpp>
 #include <openvpn/tun/tunmtu.hpp>
-#include <openvpn/tun/ipv6_setting.hpp>
+#include <openvpn/tun/tristate_setting.hpp>
 #include <openvpn/netconf/hwaddr.hpp>
 
 #include <openvpn/transport/socket_protect.hpp>
@@ -129,7 +129,7 @@ namespace openvpn {
       Protocol proto_override;
       CryptoAlgs::Type cipher_override = CryptoAlgs::Type::NONE;
       IP::Addr::Version proto_version_override = IP::Addr::Version::UNSPEC;
-      IPv6Setting ipv6;
+      TriStateSetting allowUnusedAddrFamilies;
       int conn_timeout = 0;
       unsigned int tcp_queue_limit = 64;
       SessionStats::Ptr cli_stats;
@@ -541,9 +541,18 @@ namespace openvpn {
 
 	// IPv6
 	{
-	  const unsigned int n = push_base->singleton.extend(opt, "block-ipv6");
-	  if (!n && config.ipv6() == IPv6Setting::No)
-	    push_base->singleton.emplace_back("block-ipv6");
+	  const unsigned int n6 = push_base->singleton.extend(opt, "block-ipv6");
+	  const unsigned int n4 = push_base->singleton.extend(opt, "block-ipv4");
+
+	  if (!n6 && config.allowUnusedAddrFamilies() == TriStateSetting::No)
+	    {
+	      push_base->singleton.emplace_back("block-ipv6");
+	    }
+	  if (!n4 && config.allowUnusedAddrFamilies() == TriStateSetting::No)
+	    {
+	      push_base->singleton.emplace_back("block-ipv4");
+	    }
+
 	}
       }
 
@@ -554,12 +563,6 @@ namespace openvpn {
     static PeerInfo::Set::Ptr build_peer_info(const Config& config, const ParseClientConfig& pcc, const bool autologin_sessions)
     {
       PeerInfo::Set::Ptr pi(new PeerInfo::Set);
-
-      // IPv6
-      if (config.ipv6() == IPv6Setting::No)
-	pi->emplace_back("IV_IPv6", "0");
-      else if (config.ipv6() == IPv6Setting::Yes)
-	pi->emplace_back("IV_IPv6", "1");
 
       // autologin sessions
       if (autologin_sessions)
