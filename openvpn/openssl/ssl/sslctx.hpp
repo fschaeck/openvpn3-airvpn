@@ -31,6 +31,7 @@
 #include <sstream>
 #include <utility>
 
+#include <openssl/crypto.h>
 #include <openssl/ssl.h>
 #include <openssl/x509v3.h>
 #include <openssl/rsa.h>
@@ -39,6 +40,9 @@
 #include <openssl/bn.h>
 #include <openssl/rand.h>
 #include <openssl/evp.h>
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#include <openssl/provider.h>
+#endif
 
 #include <openvpn/common/size.hpp>
 #include <openvpn/common/exception.hpp>
@@ -87,6 +91,12 @@
 
 // OpenSSLContext is an SSL Context implementation that uses the
 // OpenSSL library as a backend.
+
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+using ssl_mac_ctx=::HMAC_CTX;
+#else
+using ssl_mac_ctx=::EVP_MAC_CTX;
+#endif
 
 namespace openvpn {
 
@@ -141,6 +151,11 @@ namespace openvpn {
       void set_client_session_tickets(const bool v) override
       {
 	client_session_tickets = v;
+      }
+
+      void enable_legacy_algorithms(const bool v) override
+      {
+	load_legacy_provider = v;
       }
 
       // server side
@@ -601,6 +616,7 @@ namespace openvpn {
       X509Track::ConfigSet x509_track_config;
       bool local_cert_enabled = true;
       bool client_session_tickets = false;
+      bool load_legacy_provider = false;
     };
 
     // Represents an actual SSL session.
@@ -884,6 +900,20 @@ namespace openvpn {
 	return 0;
       }
 
+      static void print_ec_key_details(EVP_PKEY *pkey, std::ostream &os)
+      {
+	char gname[1024];
+	size_t gname_sz = sizeof(gname_sz);
+
+	const char* curve = gname;
+
+	if (!EVP_PKEY_get_group_name(pkey, gname, gname_sz, &gname_sz))
+	{
+	   curve = "Error getting group name";
+	}
+	os << ", " << EVP_PKEY_get_bits(pkey) << " bit EC, curve:" << curve;
+      }
+
       // Print a one line summary of SSL/TLS session handshake.
       static std::string ssl_handshake_details (const ::SSL *c_ssl)
       {
@@ -900,27 +930,9 @@ namespace openvpn {
 	    if (pkey != nullptr)
 	      {
 #ifndef OPENSSL_NO_EC
-		if ((EVP_PKEY_id(pkey) == EVP_PKEY_EC) && (EVP_PKEY_get0_EC_KEY(pkey) != nullptr &&
-		  EVP_PKEY_get0_EC_KEY(pkey) != nullptr))
-		  {
-		    const EC_KEY* ec = EVP_PKEY_get0_EC_KEY(pkey);
-		    const EC_GROUP* group = EC_KEY_get0_group(ec);
-		    const char* curve = nullptr;
+		if ((EVP_PKEY_id(pkey) == EVP_PKEY_EC))
 
-		    int nid = EC_GROUP_get_curve_name(group);
-
-		    if (nid != 0)
-		      {
-			curve = OBJ_nid2sn(nid);
-		      }
-
-		    if(!curve)
-		      {
-			curve = "Error getting curve name";
-		      }
-
-		    os << ", " << EC_GROUP_order_bits(group) << " bit EC, curve:" << curve;
-		  }
+		  print_ec_key_details(pkey, os);
 
 		else
 #endif
@@ -986,17 +998,14 @@ namespace openvpn {
 	    if (ct_out)
 	      BIO_free(ct_out);
 	  }
-	if (ssl_bio)
-	  BIO_free_all(ssl_bio);
-	if (ssl)
+
+	BIO_free_all(ssl_bio);
+	if (sess_cache_key)
 	  {
-	    if (sess_cache_key)
-	      {
-		SSL_set_shutdown(ssl, SSL_SENT_SHUTDOWN|SSL_RECEIVED_SHUTDOWN);
-		sess_cache_key->commit(SSL_get1_session(ssl));
-	      }
-	    SSL_free(ssl);
+	    SSL_set_shutdown(ssl, SSL_SENT_SHUTDOWN|SSL_RECEIVED_SHUTDOWN);
+	    sess_cache_key->commit(SSL_get1_session(ssl));
 	  }
+	SSL_free(ssl);
 	openssl_clear_error_stack();
 	ssl_clear();
       }
@@ -1097,23 +1106,66 @@ namespace openvpn {
     }
 
   private:
+    void setup_server_ticket_callback() const
+    {
+      const std::string sess_id_context = config->session_ticket_handler->session_id_context();
+      if (!SSL_CTX_set_session_id_context(ctx, (unsigned char *)sess_id_context.c_str(), sess_id_context.length()))
+	throw OpenSSLException("OpenSSLContext: SSL_CTX_set_session_id_context failed");
+
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+      if (!SSL_CTX_set_tlsext_ticket_key_cb(ctx, tls_ticket_key_callback))
+	throw OpenSSLException("OpenSSLContext: SSL_CTX_set_tlsext_ticket_key_cb failed");
+#else
+
+      if (!SSL_CTX_set_tlsext_ticket_key_evp_cb(ctx, tls_ticket_key_callback))
+	throw OpenSSLException("OpenSSLContext: SSL_CTX_set_tlsext_ticket_evp_cb failed");
+#endif
+    }
+
+    void initalise_lib_context()
+    {
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+      lib_ctx = OSSL_LIB_CTX_new();
+      if (!lib_ctx) {
+		throw OpenSSLException("OpenSSLContext: OSSL_LIB_CTX_new failed");
+	  }
+	  if (config->load_legacy_provider) {
+		legacy_provider = OSSL_PROVIDER_load(lib_ctx, "legacy");
+
+		if (!legacy_provider)
+		  throw OpenSSLException("OpenSSLContext: loading legacy provider failed");
+
+		default_provider = OSSL_PROVIDER_load(lib_ctx, "default");
+		if (!default_provider)
+		  throw OpenSSLException("OpenSSLContext: laoding default provider failed");
+	  }
+#endif
+	 }
+
     OpenSSLContext(Config* config_arg)
       : config(config_arg)
     {
       try
 	{
+	  // Initialise our library context for OpenSSL 3.0
+	  initalise_lib_context();
 	  // Create new SSL_CTX for server or client mode
 	  if (config->mode.is_server())
 	    {
-	      ctx = SSL_CTX_new(SSL::tls_method_server());
+	      ctx = SSL_CTX_new_ex(lib_ctx, nullptr, SSL::tls_method_server());
 	      if (ctx == nullptr)
-		throw OpenSSLException("OpenSSLContext: SSL_CTX_new failed for server method");
+		throw OpenSSLException("OpenSSLContext: SSL_CTX_new_ex failed for server method");
 
 	      // Set DH object
 	      if (!config->dh.defined())
 		OPENVPN_THROW(ssl_context_error, "OpenSSLContext: DH not defined");
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+	      if (!SSL_CTX_set0_tmp_dh_pkey(ctx, config->dh.obj_release()))
+		throw OpenSSLException("OpenSSLContext: SSL_CTX_set0_tmp_dh_pkey failed");
+#else
 	      if (!SSL_CTX_set_tmp_dh(ctx, config->dh.obj()))
 		throw OpenSSLException("OpenSSLContext: SSL_CTX_set_tmp_dh failed");
+#endif
 	      if (config->flags & SSLConst::SERVER_TO_SERVER)
 		SSL_CTX_set_purpose(ctx, X509_PURPOSE_SSL_SERVER);
 
@@ -1130,9 +1182,9 @@ namespace openvpn {
 	    }
 	  else if (config->mode.is_client())
 	    {
-	      ctx = SSL_CTX_new(SSL::tls_method_client());
+	      ctx = SSL_CTX_new_ex(lib_ctx, nullptr, SSL::tls_method_client());
 	      if (ctx == nullptr)
-		throw OpenSSLException("OpenSSLContext: SSL_CTX_new failed for client method");
+		throw OpenSSLException("OpenSSLContext: SSL_CTX_new_ex failed for client method");
 	    }
 	  else
 	    OPENVPN_THROW(ssl_context_error, "OpenSSLContext: unknown config->mode");
@@ -1160,12 +1212,7 @@ namespace openvpn {
 	      SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
 	      if (config->session_ticket_handler)
 		{
-		  const std::string sess_id_context = config->session_ticket_handler->session_id_context();
-		  if (!SSL_CTX_set_session_id_context(ctx, (unsigned char *)sess_id_context.c_str(), sess_id_context.length()))
-		    throw OpenSSLException("OpenSSLContext: SSL_CTX_set_session_id_context failed");
-
-		  if (!SSL_CTX_set_tlsext_ticket_key_cb(ctx, tls_ticket_key_callback))
-		    throw OpenSSLException("OpenSSLContext: SSL_CTX_set_tlsext_ticket_key_cb failed");
+		  setup_server_ticket_callback();
 		}
 	      else
 		sslopt |= SSL_OP_NO_TICKET;
@@ -1267,7 +1314,7 @@ namespace openvpn {
 	    OPENVPN_THROW(ssl_context_error,
 			  "OpenSSLContext: undefined tls-cert-profile");
 	    break;
-#ifdef OPENVPN_USE_TLS_MD5
+#ifdef OPENVPN_ALLOW_INSECURE_CERTPROFILE
 	  case TLSCertProfile::INSECURE:
 	    SSL_CTX_set_security_level(ctx, 0);
 	    break;
@@ -1365,18 +1412,29 @@ namespace openvpn {
 
   public:
     // create a new SSL instance
-    virtual SSLAPI::Ptr ssl()
+    SSLAPI::Ptr ssl() override
     {
       return SSL::Ptr(new SSL(*this, nullptr, nullptr));
     }
 
     // like ssl() above but verify hostname against cert CommonName and/or SubjectAltName
-    virtual SSLAPI::Ptr ssl(const std::string* hostname, const std::string* cache_key)
+    SSLAPI::Ptr ssl(const std::string* hostname, const std::string* cache_key) override
     {
       return SSL::Ptr(new SSL(*this, hostname, cache_key));
     }
 
-    void update_trust(const CertCRLList& cc)
+	SSLLib::Ctx libctx() override
+	{
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+	  if (!lib_ctx)
+		throw OpenSSLException("OpenSSLContext: library context is not initialised");
+#endif
+
+	  return lib_ctx;
+	}
+
+
+	void update_trust(const CertCRLList& cc)
     {
       OpenSSLPKI::X509Store store(cc);
       SSL_CTX_set_cert_store(ctx, store.release());
@@ -1387,7 +1445,7 @@ namespace openvpn {
       erase();
     }
 
-    virtual const Mode& mode() const
+    const Mode& mode() const override
     {
       return config->mode;
     }
@@ -1908,7 +1966,7 @@ namespace openvpn {
 				       unsigned char key_name[16],
 				       unsigned char iv[EVP_MAX_IV_LENGTH],
 				       ::EVP_CIPHER_CTX *ctx,
-				       ::HMAC_CTX *hctx,
+				       ssl_mac_ctx *hctx,
 				       int enc)
     {
       // get OpenSSLContext
@@ -1991,14 +2049,26 @@ namespace openvpn {
     static bool tls_ticket_init_cipher_hmac(const TLSSessionTicketBase::Key& key,
 					    unsigned char iv[EVP_MAX_IV_LENGTH],
 					    ::EVP_CIPHER_CTX *ctx,
-					    ::HMAC_CTX *hctx,
+					    ssl_mac_ctx *mctx,
 					    const int enc)
     {
       static_assert(TLSSessionTicketBase::Key::CIPHER_KEY_SIZE == 32, "unexpected cipher key size");
       if (!EVP_CipherInit_ex(ctx, EVP_aes_256_cbc(), nullptr, key.cipher_value_, iv, enc))
 	return false;
-      if (!HMAC_Init_ex(hctx, key.hmac_value_, TLSSessionTicketBase::Key::HMAC_KEY_SIZE, EVP_sha256(), nullptr))
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+      OSSL_PARAM params[]  {
+
+	/* The OSSL_PARAM_construct_utf8_string needs a non const str */
+	OSSL_PARAM_construct_utf8_string("digest", (char*) "sha256", 0),
+	OSSL_PARAM_construct_end()
+      };
+
+      if (!EVP_MAC_init(mctx, key.hmac_value_, TLSSessionTicketBase::Key::HMAC_KEY_SIZE, params))
 	return false;
+#else
+      if (!HMAC_Init_ex(mctx, key.hmac_value_, TLSSessionTicketBase::Key::HMAC_KEY_SIZE, EVP_sha256(), nullptr))
+	return false;
+#endif
       return true;
     }
 
@@ -2154,14 +2224,26 @@ namespace openvpn {
 	  delete epki;
 	  epki = nullptr;
 	}
-      if (ctx)
-	{
-	  SSL_CTX_free(ctx);
-	  ctx = nullptr;
-	}
+
+	SSL_CTX_free(ctx);
+	ctx = nullptr;
+#if OPENSSL_VERSION_NUMBER > 0x30000000L
+	OSSL_PROVIDER_unload(default_provider);
+	OSSL_PROVIDER_unload(legacy_provider);
+	OSSL_LIB_CTX_free(lib_ctx);
+#endif
+	  lib_ctx = nullptr;
     }
 
     Config::Ptr config;
+
+    /* OpenSSL library context, used to load non-default providers etc */
+	SSLLib::Ctx lib_ctx;
+    /* Rerferences to the Providers we loaded, so we can unlaod them */
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+	OSSL_PROVIDER *legacy_provider = nullptr;
+    OSSL_PROVIDER *default_provider = nullptr;
+#endif
     SSL_CTX* ctx = nullptr;
     ExternalPKIImpl* epki = nullptr;
     OpenSSLSessionCache::Ptr sess_cache; // client-side only

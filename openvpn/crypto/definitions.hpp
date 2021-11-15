@@ -4,7 +4,7 @@
 //               packet encryption, packet authentication, and
 //               packet compression.
 //
-//    Copyright (C) 2012-2020 OpenVPN Inc.
+//    Copyright (C) 2012-2021 OpenVPN Inc.
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU Affero General Public License Version 3
@@ -19,32 +19,23 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENVPN_MBEDTLS_CRYPTO_API_H
-#define OPENVPN_MBEDTLS_CRYPTO_API_H
+#pragma once
 
-#include <openvpn/mbedtls/crypto/cipher.hpp>
-#include <openvpn/mbedtls/crypto/cipheraead.hpp>
-#include <openvpn/mbedtls/crypto/digest.hpp>
-#include <openvpn/mbedtls/crypto/hmac.hpp>
-#include <openvpn/mbedtls/crypto/tls1prf.hpp>
-
-namespace openvpn {
-
-  // type container for MbedTLS Crypto-level API
-  struct MbedTLSCryptoAPI {
-    // cipher
-    typedef MbedTLSCrypto::CipherContext CipherContext;
-    typedef MbedTLSCrypto::CipherContextAEAD CipherContextAEAD;
-
-    // digest
-    typedef MbedTLSCrypto::DigestContext DigestContext;
-
-    // HMAC
-    typedef MbedTLSCrypto::HMACContext HMACContext;
-
-    // TLS 1.0/1.1 PRF function
-    using TLS1PRF = MbedTLSCrypto::TLS1PRF;
-  };
-}
-
+#if USE_OPENSSL
+#include <openssl/opensslv.h>
+#include <openssl/crypto.h>
 #endif
+
+/* We need to define this very early and in its own small header file so we
+ * can ensure that these definition are always available */
+namespace openvpn {
+namespace SSLLib {
+
+#if defined(USE_OPENSSL) && OPENSSL_VERSION_NUMBER >= 0x30000000L
+using Ctx = OSSL_LIB_CTX *;
+#else
+using Ctx = void*;
+#endif
+
+}
+}

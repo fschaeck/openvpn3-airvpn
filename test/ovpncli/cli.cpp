@@ -837,6 +837,8 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
     { "epki-cert",      required_argument,  nullptr,       2  },
     { "epki-ca",        required_argument,  nullptr,       3  },
     { "epki-key",       required_argument,  nullptr,       4  },
+	{ "legacy-algorithms", no_argument,      nullptr,      'L' },
+    { "enable_nonpreferred_dcalgs", no_argument, nullptr, 'Q' },
 #ifdef OPENVPN_REMOTE_OVERRIDE
     { "remote-override",required_argument,  nullptr,       5  },
 #endif
@@ -884,6 +886,8 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	bool tunPersist = false;
 	bool wintun = false;
 	bool allowLocalDnsResolvers = false;
+	bool enableLegacyAlgorithms = false;
+	bool enableNonPreferredDCO = false;
 	bool merge = false;
 	bool version = false;
 	bool altProxy = false;
@@ -898,7 +902,8 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 
 	int ch;
 	optind = 1;
-	while ((ch = getopt_long(argc, argv, "BAdeTCxfgjwmlvaYu:p:r:D:P:6:s:S:t:c:z:M:h:q:U:W:I:G:k:X:R:Z:", longopts, nullptr)) != -1)
+
+	while ((ch = getopt_long(argc, argv, "6:ABCD:G:I:LM:P:QR:S:TU:W:X:YZ:ac:degh:jk:lmp:q:r:s:t:u:vwxz:", longopts, nullptr)) != -1)
 	  {
 	    switch (ch)
 	      {
@@ -976,6 +981,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      case 'q':
 		proxyPort = optarg;
 		break;
+	      case 'Q':
+		enableNonPreferredDCO = true;
+		break;
 	      case 'U':
 		proxyUsername = optarg;
 		break;
@@ -1036,6 +1044,8 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 		break;
 	      case 'G':
 		gremlin = optarg;
+	      case 'L':
+		enableLegacyAlgorithms = true;
 		break;
 	      case 'Z':
 		write_url_fn = optarg;
@@ -1114,6 +1124,8 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      config.info = true;
 	      config.wintun = wintun;
 	      config.allowLocalDnsResolvers = allowLocalDnsResolvers;
+		  config.enableLegacyAlgorithms = enableLegacyAlgorithms;
+	      config.enableNonPreferredDCOAlgorithms = enableNonPreferredDCO;
 	      config.ssoMethods =ssoMethods;
 #if defined(OPENVPN_OVPNCLI_SINGLE_THREAD)
 	      config.clockTickMS = 250;
@@ -1290,8 +1302,9 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
       std::cout << "--compress, -c        : compression mode (yes|no|asym)" << std::endl;
       std::cout << "--pk-password, -z     : private key password" << std::endl;
       std::cout << "--tvm-override, -M    : tls-version-min override (disabled, default, tls_1_x)" << std::endl;
+      std::cout << "--legacy-algorithms, -L: Enable legacy algorithm (OpenSSL legacy provider)" << std::endl;
       std::cout << "--tcprof-override, -X : tls-cert-profile override (" <<
-#ifdef OPENVPN_USE_TLS_MD5
+#ifdef OPENVPN_ALLOW_INSECURE_CERTPROFILE
           "insecure, " <<
 #endif
           "legacy, preferred, etc.)" << std::endl;
@@ -1307,7 +1320,6 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
       std::cout << "--cache-password, -C  : cache password" << std::endl;
       std::cout << "--no-cert, -x         : disable client certificate" << std::endl;
       std::cout << "--def-keydir, -k      : default key direction ('bi', '0', or '1')" << std::endl;
-      std::cout << "--force-aes-cbc, -f   : force AES-CBC ciphersuites" << std::endl;
       std::cout << "--ssl-debug           : SSL debug level" << std::endl;
       std::cout << "--google-dns, -g      : enable Google DNS fallback" << std::endl;
       std::cout << "--auto-sess, -a       : request autologin session" << std::endl;

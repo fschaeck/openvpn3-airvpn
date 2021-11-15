@@ -153,10 +153,13 @@ namespace openvpn {
       bool autologin_sessions = false;
       bool retry_on_auth_failed = false;
       bool allow_local_lan_access = false;
+	  bool preferred_security = true;
       std::string tls_version_min_override;
       std::string tls_cert_profile_override;
       std::string tls_cipher_list;
       std::string tls_ciphersuite_list;
+	  bool enable_legacy_algorithms = false;
+      bool enable_nonpreferred_dcalgs;
       PeerInfo::Set::Ptr extra_peer_info;
 #ifdef OPENVPN_GREMLIN
       Gremlin::Config::Ptr gremlin_config;
@@ -216,8 +219,6 @@ namespace openvpn {
     {
       unsigned int limit = 0;
         
-      CryptoAlgs::allow_default_dc_algs();
-
 #if (defined(ENABLE_KOVPN) || defined(ENABLE_OVPNDCO) || defined(ENABLE_OVPNDCOWIN)) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_EXTERNAL_TUN_FACTORY)
       if (config.dco)
 #if defined(USE_TUN_BUILDER)
@@ -260,7 +261,10 @@ namespace openvpn {
       // OpenVPN Protocol context (including SSL)
       cp_main = proto_config(opt, config, pcc, false);
       cp_relay = proto_config(opt, config, pcc, true); // may be null
-      layer = cp_main->layer;
+
+      CryptoAlgs::allow_default_dc_algs<SSLLib::CryptoAPI>(cp_main->ssl_factory->libctx(), !config.enable_nonpreferred_dcalgs);
+
+	  layer = cp_main->layer;
 
 #ifdef PRIVATE_TUNNEL_PROXY
       if (config.alt_proxy && !dco)
@@ -764,19 +768,20 @@ namespace openvpn {
       cc->set_tls_cert_profile_override(config.tls_cert_profile_override);
       cc->set_tls_cipher_list(config.tls_cipher_list);
       cc->set_tls_ciphersuite_list(config.tls_ciphersuite_list);
+	  cc->enable_legacy_algorithms(config.enable_legacy_algorithms);
       if (!cc->get_mode().is_client())
 	throw option_error("only client configuration supported");
 
       // client ProtoContext config
       Client::ProtoConfig::Ptr cp(new Client::ProtoConfig());
-      cp->relay_mode = relay_mode;
-      cp->dc.set_factory(new CryptoDCSelect<SSLLib::CryptoAPI>(frame, cli_stats, prng));
+	  cp->ssl_factory = cc->new_factory();
+	  cp->relay_mode = relay_mode;
+      cp->dc.set_factory(new CryptoDCSelect<SSLLib::CryptoAPI>(cp->ssl_factory->libctx(), frame, cli_stats, prng));
       cp->dc_deferred = true; // defer data channel setup until after options pull
       cp->tls_auth_factory.reset(new CryptoOvpnHMACFactory<SSLLib::CryptoAPI>());
       cp->tls_crypt_factory.reset(new CryptoTLSCryptFactory<SSLLib::CryptoAPI>());
       cp->tls_crypt_metadata_factory.reset(new CryptoTLSCryptMetadataFactory());
       cp->tlsprf_factory.reset(new CryptoTLSPRFFactory<SSLLib::CryptoAPI>());
-      cp->ssl_factory = cc->new_factory();
       cp->load(opt, *proto_context_options, config.default_key_direction, false);
       cp->set_xmit_creds(!autologin || pcc.hasEmbeddedPassword() || autologin_sessions);
       cp->extra_peer_info = build_peer_info(config, pcc, autologin_sessions);

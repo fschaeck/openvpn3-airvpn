@@ -33,6 +33,7 @@
 #include <openvpn/common/exception.hpp>
 #include <openvpn/crypto/static_key.hpp>
 #include <openvpn/crypto/cryptoalgs.hpp>
+#include <openvpn/ssl/sslapi.hpp>
 
 namespace openvpn {
   namespace MbedTLSCrypto {
@@ -66,7 +67,12 @@ namespace openvpn {
 
       ~CipherContext() { erase() ; }
 
-      void init(const CryptoAlgs::Type alg, const unsigned char *key, const int mode)
+	  static bool is_supported(SSLLib::Ctx libctx, const CryptoAlgs::Type alg)
+	  {
+		return (cipher_type(alg) != nullptr);
+	  }
+
+      void init(SSLLib::Ctx libctx, const CryptoAlgs::Type alg, const unsigned char *key, const int mode)
       {
 	erase();
 
@@ -76,6 +82,8 @@ namespace openvpn {
 
 	// get cipher type
 	const mbedtls_cipher_info_t *ci = cipher_type(alg);
+	if(!ci)
+		OPENVPN_THROW(mbedtls_cipher_error, CryptoAlgs::name(alg) << ": not usable");
 
 	// initialize cipher context with cipher type
 	if (mbedtls_cipher_setup(&ctx, ci) < 0)
@@ -166,7 +174,7 @@ namespace openvpn {
 	  case CryptoAlgs::BF_CBC:
 	    return mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_BLOWFISH_CBC);
 	  default:
-	    OPENVPN_THROW(mbedtls_cipher_error, CryptoAlgs::name(alg) << ": not usable");
+		return nullptr;
 	  }
       }
 

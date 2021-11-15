@@ -860,7 +860,10 @@ namespace openvpn {
       void set_tls_crypt_algs(const CryptoAlgs::Type digest,
 			      const CryptoAlgs::Type cipher)
       {
-	tls_crypt_context = tls_crypt_factory->new_obj(digest, cipher);
+	/* TODO: we currently use the default SSL library context here as the
+	 * library context is not available this early. This should not matter
+	 * for the algorithms used by tls_crypt */
+	tls_crypt_context = tls_crypt_factory->new_obj(nullptr, digest, cipher);
       }
 
       void set_xmit_creds(const bool xmit_creds_arg)
@@ -1006,9 +1009,6 @@ namespace openvpn {
 	CryptoAlgs::for_each([&out](CryptoAlgs::Type type, const CryptoAlgs::Alg& alg) -> bool {
 	  if (!CryptoAlgs::defined(type) || !alg.dc_cipher())
 	    return false;
-	  if (type == CryptoAlgs::CHACHA20_POLY1305 &&
-	      !AEAD::is_algorithm_supported<SSLLib::CryptoAPI>(CryptoAlgs::CHACHA20_POLY1305))
-	    return false;
 	  out << alg.name() << ':';
 	  return true;
 	});
@@ -1036,11 +1036,24 @@ namespace openvpn {
       // Not const because dc.context() caches the DC context.
       unsigned int link_mtu_adjust()
       {
+	size_t dc_overhead;
+	if (dc.cipher() == CryptoAlgs::BF_CBC)
+	{
+	  /* since often configuration lack BF-CBC, we hardcode the overhead for BF-CBC to avoid
+	   * trying to load BF-CBC, which is not available anymore in modern crypto libraries */
+	  dc_overhead = CryptoAlgs::size(dc.digest()) +       // HMAC
+	      		64/8 +       // Cipher IV
+	      		64/8;       // worst-case PKCS#7 padding expansion (blocksize)
+	}
+	else
+	{
+	  dc_overhead = dc.context().encap_overhead();
+	}
 	const size_t adj = protocol.extra_transport_bytes() + // extra 2 bytes for TCP-streamed packet length
           (enable_op32 ? 4 : 1) +                        // leading op
 	  comp_ctx.extra_payload_bytes() +               // compression header
 	  PacketID::size(PacketID::SHORT_FORM) +         // sequence number
-	  dc.context().encap_overhead();                 // data channel crypto layer overhead
+	  dc_overhead;                 // data channel crypto layer overhead
 	return (unsigned int)adj;
       }
 
@@ -1966,7 +1979,8 @@ namespace openvpn {
 	crypto_flags = crypto->defined();
 
 	if (crypto_flags & CryptoDCInstance::CIPHER_DEFINED)
-	  crypto->init_cipher(key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::ENCRYPT | key_dir),
+	  crypto->init_cipher(
+		  key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::ENCRYPT | key_dir),
 			      key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir));
 
 	if (crypto_flags & CryptoDCInstance::HMAC_DEFINED)
@@ -3188,8 +3202,9 @@ namespace openvpn {
 
 	// static direction assignment - not user configurable
 	const unsigned int key_dir = server ? OpenVPNStaticKey::NORMAL : OpenVPNStaticKey::INVERSE;
-	tls_crypt_recv->init(c.tls_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir),
-			     c.tls_key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir));
+	tls_crypt_recv->init(c.ssl_factory->libctx(),
+						 c.tls_key.slice(OpenVPNStaticKey::HMAC | OpenVPNStaticKey::DECRYPT | key_dir),
+						 c.tls_key.slice(OpenVPNStaticKey::CIPHER | OpenVPNStaticKey::DECRYPT | key_dir));
 
 	// needed to create the decrypt buffer during validation
 	frame = c.frame;
@@ -3324,14 +3339,16 @@ namespace openvpn {
 			     OpenVPNStaticKey::NORMAL :
 			     OpenVPNStaticKey::INVERSE;
 
-      tls_crypt_send->init(key.slice(OpenVPNStaticKey::HMAC |
-				     OpenVPNStaticKey::ENCRYPT | key_dir),
-			   key.slice(OpenVPNStaticKey::CIPHER |
-				     OpenVPNStaticKey::ENCRYPT | key_dir));
-      tls_crypt_recv->init(key.slice(OpenVPNStaticKey::HMAC |
-				     OpenVPNStaticKey::DECRYPT | key_dir),
-			   key.slice(OpenVPNStaticKey::CIPHER |
-				     OpenVPNStaticKey::DECRYPT | key_dir));
+	  tls_crypt_send->init(c.ssl_factory->libctx(),
+						   key.slice(OpenVPNStaticKey::HMAC |
+							   OpenVPNStaticKey::ENCRYPT | key_dir),
+						   key.slice(OpenVPNStaticKey::CIPHER |
+							   OpenVPNStaticKey::ENCRYPT | key_dir));
+	  tls_crypt_recv->init(c.ssl_factory->libctx(),
+						   key.slice(OpenVPNStaticKey::HMAC |
+							   OpenVPNStaticKey::DECRYPT | key_dir),
+						   key.slice(OpenVPNStaticKey::CIPHER |
+							   OpenVPNStaticKey::DECRYPT | key_dir));
     }
 
     void reset_tls_crypt_server(const Config& c)
@@ -3345,7 +3362,8 @@ namespace openvpn {
 
       //the server key is composed by one key set only, therefore direction and
       //mode should not be specified when slicing
-      tls_crypt_server->init(c.tls_key.slice(OpenVPNStaticKey::HMAC),
+      tls_crypt_server->init(c.ssl_factory->libctx(),
+		  		 c.tls_key.slice(OpenVPNStaticKey::HMAC),
 			     c.tls_key.slice(OpenVPNStaticKey::CIPHER));
 
       tls_crypt_metadata = c.tls_crypt_metadata_factory->new_obj();

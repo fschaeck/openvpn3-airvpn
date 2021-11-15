@@ -40,320 +40,221 @@ namespace openvpn
 {
     namespace OpenSSLCrypto
     {
-        class CipherContextAEAD
-        {
-            CipherContextAEAD(const CipherContextAEAD&) = delete;
-            CipherContextAEAD& operator=(const CipherContextAEAD&) = delete;
+      class CipherContextAEAD
+      {      /* In OpenSSL 3.0 the method that returns EVP_CIPHER, the cipher needs to be
+ * freed afterwards, thus needing a non-const type. In contrast, OpenSSL 1.1.1
+ * and lower returns a const type, needing a const type */
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+    using evp_cipher_type = const EVP_CIPHER;
+#else
+    using evp_cipher_type = EVP_CIPHER;
+#endif
+      using CIPHER_unique_ptr = std::unique_ptr<evp_cipher_type, decltype(&::EVP_CIPHER_free)>;
 
-            private:
+    EVP_CIPHER_CTX *ctx = nullptr;
+          
+    public:
+      CipherContextAEAD(const CipherContextAEAD&) = delete;
+      CipherContextAEAD& operator=(const CipherContextAEAD&) = delete;
 
-            bool initialized;
-            int set_tag, get_tag;
-            EVP_CIPHER_CTX *ctx = nullptr;
-            CryptoAlgs::Type crypto_alg;
+      OPENVPN_EXCEPTION(openssl_gcm_error);
 
-            public:
-      
-            OPENVPN_EXCEPTION(openssl_aead_error);
+      // mode parameter for constructor
+      enum {
+	MODE_UNDEF = -1,
+	ENCRYPT = 1,
+	DECRYPT = 0
+      };
 
-            // mode parameter for constructor
-            
-            enum
-            {
-                MODE_UNDEF = -1,
-                ENCRYPT = 1,
-                DECRYPT = 0
-            };
+      // OpenSSL cipher constants
+      enum {
+	IV_LEN = 12,
+	AUTH_TAG_LEN = 16,
+	SUPPORTS_IN_PLACE_ENCRYPT = 0,
+      };
 
-            // OpenSSL cipher constants
-            
-            enum
-            {
-                IV_LEN = 12,
-                AUTH_TAG_LEN = 16,
-                SUPPORTS_IN_PLACE_ENCRYPT = 0,
-            };
+      CipherContextAEAD() = default;
 
-            CipherContextAEAD()	: initialized(false)
-            {
-            }
+      ~CipherContextAEAD() { free_cipher_context(); }
 
-            ~CipherContextAEAD()
-            {
-                free_cipher_context();
-            }
+      void init(SSLLib::Ctx libctx,
+		  const CryptoAlgs::Type alg,
+		const unsigned char *key,
+		const unsigned int keysize,
+		const int mode)
+      {
+	free_cipher_context();
+	unsigned int ckeysz = 0;
+	CIPHER_unique_ptr ciph(cipher_type(libctx, alg, ckeysz), EVP_CIPHER_free);
 
-            void init(const CryptoAlgs::Type alg, const unsigned char *key, const unsigned int keysize, const int mode)
-            {
-                free_cipher_context();
-	
-                unsigned int ckeysz = 0;
-	
-                const EVP_CIPHER *ciph = cipher_type(alg, ckeysz);
+	if (!ciph)
+	  OPENVPN_THROW(openssl_gcm_error, CryptoAlgs::name(alg) << ": not usable");
 
-                if(ciph == nullptr)
-                    OPENVPN_THROW(openssl_aead_error, CryptoAlgs::name(alg) << ": not usable");
+	if (ckeysz > keysize)
+	  throw openssl_gcm_error("insufficient key material");
+	ctx = EVP_CIPHER_CTX_new();
+	EVP_CIPHER_CTX_reset(ctx);
+	switch (mode)
+	  {
+	  case ENCRYPT:
+	    if (!EVP_EncryptInit_ex(ctx, ciph.get(), nullptr, key, nullptr))
+	      {
+		openssl_clear_error_stack();
+		free_cipher_context();
+		throw openssl_gcm_error("EVP_EncryptInit_ex (init)");
+	      }
+	    break;
+	  case DECRYPT:
+	    if (!EVP_DecryptInit_ex(ctx, ciph.get(), nullptr, key, nullptr))
+	      {
+		openssl_clear_error_stack();
+		free_cipher_context();
+		throw openssl_gcm_error("EVP_DecryptInit_ex (init)");
+	      }
+	    break;
+	  default:
+	    throw openssl_gcm_error("bad mode");
+	  }
+	if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, IV_LEN, nullptr) != 1)
+	  {
+	    openssl_clear_error_stack();
+	    free_cipher_context();
+	    throw openssl_gcm_error("EVP_CIPHER_CTX_ctrl set IV len");
+	  }
+      }
 
-                crypto_alg = alg;
+      void encrypt(const unsigned char *input,
+		   unsigned char *output,
+		   size_t length,
+		   const unsigned char *iv,
+		   unsigned char *tag,
+		   const unsigned char *ad,
+		   size_t ad_len)
+      {
+	int len;
+	int ciphertext_len;
 
-                if (ckeysz > keysize)
-                    throw openssl_aead_error("insufficient key material");
-	
-                ctx = EVP_CIPHER_CTX_new();
-	
-                EVP_CIPHER_CTX_reset(ctx);
-	
-                switch(mode)
-                {
-                    case ENCRYPT:
-                    {
-                        if(!EVP_EncryptInit_ex(ctx, ciph, nullptr, key, nullptr))
-                        {
-                            openssl_clear_error_stack();
+	check_initialized();
+	if (!EVP_EncryptInit_ex(ctx, nullptr, nullptr, nullptr, iv))
+	  {
+	    openssl_clear_error_stack();
+	    throw openssl_gcm_error("EVP_EncryptInit_ex (reset)");
+	  }
+	if (!EVP_EncryptUpdate(ctx, nullptr, &len, ad, int(ad_len)))
+	  {
+	    openssl_clear_error_stack();
+	    throw openssl_gcm_error("EVP_EncryptUpdate AD");
+	  }
+	if (!EVP_EncryptUpdate(ctx, output, &len, input, int(length)))
+	  {
+	    openssl_clear_error_stack();
+	    throw openssl_gcm_error("EVP_EncryptUpdate data");
+	  }
+	ciphertext_len = len;
+	if (!EVP_EncryptFinal_ex(ctx, output+len, &len))
+	  {
+	    openssl_clear_error_stack();
+	    throw openssl_gcm_error("EVP_EncryptFinal_ex");
+	  }
+	ciphertext_len += len;
+	if ((size_t) ciphertext_len != length)
+	  {
+	    throw openssl_gcm_error("encrypt size inconsistency");
+	  }
+	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, AUTH_TAG_LEN, tag))
+	  {
+	    openssl_clear_error_stack();
+	    throw openssl_gcm_error("EVP_CIPHER_CTX_ctrl get tag");
+	  }
+      }
 
-                            free_cipher_context();
+      bool decrypt(const unsigned char *input,
+		  unsigned char *output,
+		  size_t length,
+		  const unsigned char *iv,
+		  unsigned char *tag,
+		  const unsigned char *ad,
+		  size_t ad_len)
+      {
+	int len;
+	int plaintext_len;
 
-                            throw openssl_aead_error("EVP_EncryptInit_ex (init)");
-                        }
-                    }
-                    break;
-	  
-                    case DECRYPT:
-                    {
-                        if(!EVP_DecryptInit_ex(ctx, ciph, nullptr, key, nullptr))
-                        {
-                            openssl_clear_error_stack();
-                            
-                            free_cipher_context();
-                            
-                            throw openssl_aead_error("EVP_DecryptInit_ex (init)");
-                        }
-                    }
-                    break;
-                    
-                    default:
-                    {
-                        throw openssl_aead_error("bad mode");
-                    }
-                    break;
-                }
-	
-                switch(crypto_alg)
-                {
-                    case CryptoAlgs::AES_128_GCM:
-                    case CryptoAlgs::AES_192_GCM:
-                    case CryptoAlgs::AES_256_GCM:
-                    {
-                        if(EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, IV_LEN, nullptr) != 1)
-                        {
-                            openssl_clear_error_stack();
-                            
-                            free_cipher_context();
-                            
-                            throw openssl_aead_error("EVP_CIPHER_CTX_ctrl set GCM IV len");
-                        }
-                        
-                        set_tag = EVP_CTRL_GCM_SET_TAG;
-                        get_tag = EVP_CTRL_GCM_GET_TAG;
-                    }
-                    break;
+	check_initialized();
+	if (!EVP_DecryptInit_ex(ctx, nullptr, nullptr, nullptr, iv))
+	  {
+	    openssl_clear_error_stack();
+	    throw openssl_gcm_error("EVP_DecryptInit_ex (reset)");
+	  }
+	if (!EVP_DecryptUpdate(ctx, nullptr, &len, ad, int(ad_len)))
+	  {
+	    openssl_clear_error_stack();
+	    throw openssl_gcm_error("EVP_DecryptUpdate AD");
+	  }
+	if (!EVP_DecryptUpdate(ctx, output, &len, input, int(length)))
+	  {
+	    openssl_clear_error_stack();
+	    throw openssl_gcm_error("EVP_DecryptUpdate data");
+	  }
+	plaintext_len = len;
+	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, AUTH_TAG_LEN, tag))
+	  {
+	    openssl_clear_error_stack();
+	    throw openssl_gcm_error("EVP_CIPHER_CTX_ctrl set tag");
+	  }
+	if (!EVP_DecryptFinal_ex(ctx, output+len, &len))
+	  {
+	    openssl_clear_error_stack();
+	    return false;
+	  }
+	plaintext_len += len;
+	if (static_cast<size_t>(plaintext_len) != length)
+	  {
+	    throw openssl_gcm_error("decrypt size inconsistency");
+	  }
+	return true;
+      }
 
-                    case CryptoAlgs::CHACHA20_POLY1305:
-                    {
-                        if(EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_IVLEN, IV_LEN, nullptr) != 1)
-                        {
-                            openssl_clear_error_stack();
+      bool is_initialized() const { return ctx != nullptr; }
 
-                            throw openssl_aead_error("EVP_CIPHER_CTX_ctrl set CHACHA20 IV len");
-                        }
-                        
-                        set_tag = EVP_CTRL_AEAD_SET_TAG;
-                        get_tag = EVP_CTRL_AEAD_GET_TAG;
-                    }
-                    break;
-                    
-                    default:
-                    {
-                    }
-                    break;
-                }
+      static bool is_supported(SSLLib::Ctx libctx, const CryptoAlgs::Type alg)
+      {
+	unsigned int keysize = 0;
+	CIPHER_unique_ptr cipher(cipher_type(libctx, alg, keysize), EVP_CIPHER_free);
+	return (bool)cipher;
+      }
 
-                initialized = true;
-            }
 
-            void encrypt(const unsigned char *input, unsigned char *output, size_t length, const unsigned char *iv, unsigned char *tag, const unsigned char *ad, size_t ad_len)
-            {
-                int len;
-                int ciphertext_len;
+    private:
+      static evp_cipher_type *cipher_type(SSLLib::Ctx libctx, const CryptoAlgs::Type alg,
+					   unsigned int& keysize)
+      {
+	switch (alg)
+	  {
+	  case CryptoAlgs::AES_128_GCM:
+	    keysize = 16;
+	    return EVP_CIPHER_fetch(libctx, "AES-128-GCM", nullptr);
+	    keysize = 24;
+	    return EVP_CIPHER_fetch(libctx, "AES-192-GCM", nullptr);
+	  case CryptoAlgs::AES_256_GCM:
+	    keysize = 32;
+	    return EVP_CIPHER_fetch(libctx, "AES-256-GCM", nullptr);
+	  case CryptoAlgs::CHACHA20_POLY1305:
+	      keysize = 32;
+	      return EVP_CIPHER_fetch(libctx, "CHACHA20-POLY1305", nullptr);
+	  default:
+	       keysize = 0;
+	       return nullptr;
+	  }
+      }
 
-                check_initialized();
-	
-                if(!EVP_EncryptInit_ex(ctx, nullptr, nullptr, nullptr, iv))
-                {
-                    openssl_clear_error_stack();
-	    
-                    throw openssl_aead_error("EVP_EncryptInit_ex (reset)");
-                }
-	
-                if(!EVP_EncryptUpdate(ctx, nullptr, &len, ad, int(ad_len)))
-                {
-                    openssl_clear_error_stack();
+      void free_cipher_context()
+      {
+	EVP_CIPHER_CTX_free(ctx);
+	ctx = nullptr;
+      }
 
-                    throw openssl_aead_error("EVP_EncryptUpdate AD");
-                }
-	
-                if(!EVP_EncryptUpdate(ctx, output, &len, input, int(length)))
-                {
-                    openssl_clear_error_stack();
-
-                    throw openssl_aead_error("EVP_EncryptUpdate data");
-                }
-	
-                ciphertext_len = len;
-	
-                if(!EVP_EncryptFinal_ex(ctx, output+len, &len))
-                {
-                    openssl_clear_error_stack();
-
-                    throw openssl_aead_error("EVP_EncryptFinal_ex");
-                }
-	
-                ciphertext_len += len;
-	
-                if((size_t)ciphertext_len != length)
-                {
-                    throw openssl_aead_error("encrypt size inconsistency");
-                }
-
-                if(!EVP_CIPHER_CTX_ctrl(ctx, get_tag, AUTH_TAG_LEN, tag))
-                {
-                    openssl_clear_error_stack();
-
-                    throw openssl_aead_error("EVP_CIPHER_CTX_ctrl get tag");
-                }
-            }
-
-            bool decrypt(const unsigned char *input, unsigned char *output, size_t length, const unsigned char *iv, unsigned char *tag, const unsigned char *ad, size_t ad_len)
-            {
-                int len;
-                int plaintext_len;
-
-                check_initialized();
-	
-                if(!EVP_DecryptInit_ex(ctx, nullptr, nullptr, nullptr, iv))
-                {
-                    openssl_clear_error_stack();
-
-                    throw openssl_aead_error("EVP_DecryptInit_ex (reset)");
-                }
-	
-                if(!EVP_DecryptUpdate(ctx, nullptr, &len, ad, int(ad_len)))
-                {
-                    openssl_clear_error_stack();
-
-                    throw openssl_aead_error("EVP_DecryptUpdate AD");
-                }
-
-                if(!EVP_DecryptUpdate(ctx, output, &len, input, int(length)))
-                {
-                    openssl_clear_error_stack();
-
-                    throw openssl_aead_error("EVP_DecryptUpdate data");
-                }
-	
-                plaintext_len = len;
-	
-                if(!EVP_CIPHER_CTX_ctrl(ctx, set_tag, AUTH_TAG_LEN, tag))
-                {
-                    openssl_clear_error_stack();
-
-                    throw openssl_aead_error("EVP_CIPHER_CTX_ctrl set tag");
-                }
-
-                if(!EVP_DecryptFinal_ex(ctx, output+len, &len))
-                {
-                    openssl_clear_error_stack();
-
-                    return false;
-                }
-	
-                plaintext_len += len;
-	
-                if(static_cast<size_t>(plaintext_len) != length)
-                {
-                    throw openssl_aead_error("decrypt size inconsistency");
-                }
-	
-                return true;
-            }
-
-            bool is_initialized() const
-            {
-                return ctx != nullptr;
-            }
- 
-            static bool is_supported(const CryptoAlgs::Type alg)
-            {
-                unsigned int keysize;
-	
-                return(cipher_type(alg, keysize) != nullptr);
-            }
-
-            private:
-      
-            static const EVP_CIPHER *cipher_type(const CryptoAlgs::Type alg, unsigned int& keysize)
-            {
-                switch(alg)
-                {
-                    case CryptoAlgs::AES_128_GCM:
-                    {
-                        keysize = 16;
-                        
-                        return EVP_aes_128_gcm();
-                    }
-                    break;
-
-                    case CryptoAlgs::AES_192_GCM:
-                    {
-                        keysize = 24;
-	    
-                        return EVP_aes_192_gcm();
-                    }
-                    break;
-
-                    case CryptoAlgs::AES_256_GCM:
-                    {
-                        keysize = 32;
-	    
-                        return EVP_aes_256_gcm();
-                    }
-                    break;
-
-                    case CryptoAlgs::CHACHA20_POLY1305:
-                    {
-                        keysize = 32;
-	    
-                        return EVP_chacha20_poly1305();
-                    }
-                    break;
-
-                    default:
-                    {
-                        OPENVPN_THROW(openssl_aead_error, CryptoAlgs::name(alg) << ": not usable");
-                    }
-                    break;
-                }
-            }
-
-            void free_cipher_context()
-            {
-                EVP_CIPHER_CTX_free(ctx);
-
-                initialized = false;
-            }
-
-            void check_initialized() const
-            {
+      void check_initialized() const
+      {
 #ifdef OPENVPN_ENABLE_ASSERT
                 if(!ctx)
                     throw openssl_aead_error("uninitialized");

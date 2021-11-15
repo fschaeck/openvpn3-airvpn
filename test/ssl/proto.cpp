@@ -889,11 +889,11 @@ int test(const int thread_num)
     MySessionStats::Ptr serv_stats(new MySessionStats);
 
     // client ProtoContext config
-    CryptoAlgs::allow_default_dc_algs();
     typedef ProtoContext ClientProtoContext;
     ClientProtoContext::Config::Ptr cp(new ClientProtoContext::Config);
     cp->ssl_factory = cc->new_factory();
-    cp->dc.set_factory(new CryptoDCSelect<ClientCryptoAPI>(frame, cli_stats, prng_cli));
+	CryptoAlgs::allow_default_dc_algs<ClientCryptoAPI>(cp->ssl_factory->libctx(), false);
+	cp->dc.set_factory(new CryptoDCSelect<ClientCryptoAPI>(cp->ssl_factory->libctx(), frame, cli_stats, prng_cli));
     cp->tlsprf_factory.reset(new CryptoTLSPRFFactory<ClientCryptoAPI>());
     cp->frame = frame;
     cp->now = &time;
@@ -980,7 +980,7 @@ int test(const int thread_num)
     typedef ProtoContext ServerProtoContext;
     ServerProtoContext::Config::Ptr sp(new ServerProtoContext::Config);
     sp->ssl_factory = sc->new_factory();
-    sp->dc.set_factory(new CryptoDCSelect<ServerCryptoAPI>(frame, serv_stats, prng_serv));
+    sp->dc.set_factory(new CryptoDCSelect<ServerCryptoAPI>(sp->ssl_factory->libctx(), frame, serv_stats, prng_serv));
     sp->tlsprf_factory.reset(new CryptoTLSPRFFactory<ServerCryptoAPI>());
     sp->frame = frame;
     sp->now = &time;
