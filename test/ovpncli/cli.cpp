@@ -840,7 +840,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
     { "epki-ca",        required_argument,  nullptr,       3  },
     { "epki-key",       required_argument,  nullptr,       4  },
 	{ "legacy-algorithms", no_argument,      nullptr,      'L' },
-    { "enable_nonpreferred_dcalgs", no_argument, nullptr, 'Q' },
+    { "non-preferred-algorithms", no_argument, nullptr, 'Q' },
 #ifdef OPENVPN_REMOTE_OVERRIDE
     { "remote-override",required_argument,  nullptr,       5  },
 #endif
@@ -1127,7 +1127,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 	      config.wintun = wintun;
 	      config.allowLocalDnsResolvers = allowLocalDnsResolvers;
 		  config.enableLegacyAlgorithms = enableLegacyAlgorithms;
-	      config.enableNonPreferredDCOAlgorithms = enableNonPreferredDCO;
+	      config.enableNonPreferredDCAlgorithms = enableNonPreferredDCO;
 	      config.ssoMethods =ssoMethods;
 #if defined(OPENVPN_OVPNCLI_SINGLE_THREAD)
 	      config.clockTickMS = 250;
@@ -1240,7 +1240,7 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 #if defined(USE_MBEDTLS)
 			  client.epki_ctx.parse(epki_key_txt, "EPKI", privateKeyPassword);
 #else
-			  client.epki_pkey.parse_pem(epki_key_txt, "epki private key");
+			  client.epki_pkey.parse_pem(epki_key_txt, "epki private key", nullptr);
 #endif
 			}
 		      else
@@ -1299,12 +1299,13 @@ int openvpn_client(int argc, char *argv[], const std::string* profile_content)
 #ifdef OPENVPN_REMOTE_OVERRIDE
       std::cout << "--remote-override     : command to run to generate next remote (returning host,ip,port,proto)" << std::endl;
 #endif
-      std::cout << "--allowAF, -6            : Allow unused Adrress families (yes|no|default)" << std::endl;
+      std::cout << "--allowAF, -6         : Allow unused address families (yes|no|default)" << std::endl;
       std::cout << "--timeout, -t         : timeout" << std::endl;
       std::cout << "--compress, -c        : compression mode (yes|no|asym)" << std::endl;
       std::cout << "--pk-password, -z     : private key password" << std::endl;
       std::cout << "--tvm-override, -M    : tls-version-min override (disabled, default, tls_1_x)" << std::endl;
       std::cout << "--legacy-algorithms, -L: Enable legacy algorithm (OpenSSL legacy provider)" << std::endl;
+      std::cout << "--non-preferred-algorithms, -Q: Enables non preferred data channel algorithms" << std::endl;
       std::cout << "--tcprof-override, -X : tls-cert-profile override (" <<
 #ifdef OPENVPN_ALLOW_INSECURE_CERTPROFILE
           "insecure, " <<

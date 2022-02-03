@@ -37,8 +37,6 @@ else ()
     message("lzo not found, skipping lzo compression tests")
 endif ()
 
-
-
 set(CORE_TEST_DEFINES
         -DOPENVPN_FORCE_TUN_NULL
         -DUNIT_TEST
@@ -74,11 +72,18 @@ else ()
 endif ()
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    list(APPEND EXTRA_LIBS -lcap)
+
     target_sources(coreUnitTests PRIVATE test_sitnl.cpp)
 endif ()
 
 if (UNIX)
-    target_sources(coreUnitTests PRIVATE test_cpu_time.cpp)
+    target_sources(coreUnitTests PRIVATE
+      # includes <arpa/inet.h>
+      test_buffer_ip.cpp
+
+      test_cpu_time.cpp
+      )
 endif ()
 
 if (WIN32)
