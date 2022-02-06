@@ -695,7 +695,13 @@ namespace openvpn {
 	    {
 	      if (route.ipv6)
 		{
-		  OPENVPN_LOG("NOTE: exclude IPv6 routes not supported yet"); // fixme
+                  if (!pull.block_ipv6)
+                  {
+		    if (gw.v6.defined())
+		      add_del_route(route.address, route.prefix_length, gw.v6.addr().to_string(), gw.v6.dev(), R_ADD_SYS, rtvec, create, destroy);
+		    else
+		      OPENVPN_LOG("NOTE: cannot determine gateway for exclude IPv6 routes");
+                  }
 		}
 	      else
 		{
