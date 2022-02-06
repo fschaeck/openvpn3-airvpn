@@ -7,3 +7,6 @@ out
 .vscode
 tags*
 build
+# Eclipse IDE files
+.project
+.cproject
