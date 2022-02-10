@@ -1,4 +1,12 @@
-Changelog 3.7.1 AirVPN - Release date: XX XXX 2021 by ProMIND
+Changelog 3.7.2 AirVPN - Release date: 10 February 2022 by ProMIND
+
+- [ProMIND] [2022/02/10] client/ovpncli.cpp: ssl_library_version() now returns the runtime version values directly taken from the respective SSL library functions instead of using the "lazy and highly questionable" hard coded string at compile time provided by the master branch.
+
+
+*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+
+Changelog 3.7.1 AirVPN - Release date: 28 October 2021 by ProMIND
 
 - [ProMIND] [2021/09/30] client/ovpncli.cpp: added method ssl_library_version
 

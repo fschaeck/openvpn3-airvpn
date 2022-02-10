@@ -1511,7 +1511,23 @@ namespace openvpn {
 
     OPENVPN_CLIENT_EXPORT std::string OpenVPNClient::ssl_library_version()
     {
-      return get_ssl_library_version();
+#ifdef USE_OPENSSL
+
+        return SSLeay_version(SSLEAY_VERSION);
+
+#elif defined(USE_MBEDTLS)
+        
+        char version[32];
+        
+        mbedtls_version_get_string_full(version);
+        
+        return version;
+
+#else
+
+        return "unknown";
+
+#endif
     }
 
     OPENVPN_CLIENT_EXPORT std::string OpenVPNClient::platform()
