@@ -1,6 +1,21 @@
+Changelog 3.7.3 AirVPN - Release date: 8 March 2022 by ProMIND
+
+- [ProMIND] [2022/03/08] client/cliconnect.hpp: Error::N_PAUSE and Error::N_RECONNECT are not
+                         signaled and counted as errors anymore. This prevents the confusing
+                         and odd error condition signaled by OpenVPN3 in case of pause, resume
+                         and reconnection events.
+
+
+*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+
 Changelog 3.7.2 AirVPN - Release date: 10 February 2022 by ProMIND
 
-- [ProMIND] [2022/02/10] client/ovpncli.cpp: ssl_library_version() now returns the runtime version values directly taken from the respective SSL library functions instead of using the "lazy and highly questionable" hard coded string at compile time provided by the master branch.
+- [ProMIND] [2022/02/10] client/ovpncli.cpp: ssl_library_version() now returns
+                         the runtime version values directly taken from the respective
+                         SSL library functions instead of using the "lazy and highly
+                         questionable" hard coded string at compile time provided by
+                         the master branch.
 
 
 *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
@@ -62,11 +77,17 @@ Changelog 3.6.5 AirVPN - Release date: 24 July 2020 by ProMIND
 Changelog 3.6.4 AirVPN - Release date: 23 May 2020 by ProMIND
 
 - [ProMIND] [2020/05/23] completely changed the logics controlling overrides (server, port and protocol)
-                         client/ovpncli.cpp: parse_config() Properly assigned serverOverride, portOverride and protoOverride to eval.remoteList
-                         client/ovpncli.cpp: parse_config() In case serverOverride is set, remoteList is cleared and recreated with just one item containing serverOverride
-                         client/ovpncli.cpp: parse_config() In case portOverride or protoOverride is set, all the items in remoteList are changed accordingly
-                         openvpn/client/remotelist.hpp: Added public method set_transport_protocol_override() to assign the override protocol to all items in remoteList
-                         openvpn/client/cliopt.hpp: ClientOptions() now calls remote_list->set_transport_protocol_override() instead of remote_list->handle_proto_override()
+- [ProMIND] [2020/05/23] client/ovpncli.cpp: parse_config() Properly assigned serverOverride, portOverride
+                         and protoOverride to eval.remoteList
+- [ProMIND] [2020/05/23] client/ovpncli.cpp: parse_config() In case serverOverride is set, remoteList is
+                         cleared and recreated with just one item containing serverOverride
+- [ProMIND] [2020/05/23] client/ovpncli.cpp: parse_config() In case portOverride or protoOverride is set,
+                         all the items in remoteList are changed accordingly
+- [ProMIND] [2020/05/23] openvpn/client/remotelist.hpp: Added public method set_transport_protocol_override()
+                         to assign the override protocol to all items in remoteList
+- [ProMIND] [2020/05/23] openvpn/client/cliopt.hpp: ClientOptions() now calls
+                         remote_list->set_transport_protocol_override() instead of
+                         remote_list->handle_proto_override()
 
 
 *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
@@ -99,14 +120,19 @@ Changelog 3.6.1 AirVPN - Release date: 28 November 2019 by ProMIND
 
 Changelog 3.3.2 AirVPN - Release date: 10 October 2019 by ProMIND
 
-- [ProMIND] [2019/09/04] fixed bug in openvpn/tun/linux/client/tunsetup.hpp: changed if(conf->txqueuelen) to if(conf->txqueuelen > 0) which made linux connection to fail
+- [ProMIND] [2019/09/04] fixed bug in openvpn/tun/linux/client/tunsetup.hpp: changed if(conf->txqueuelen) to
+                         if(conf->txqueuelen > 0) which made linux connection to fail
 - [ProMIND] [2019/09/04] openvpn/tun/linux/client/tuncli.hpp: added initialization to TunLinux::Config::txqueuelen
-- [ProMIND] [2019/09/10] openvpn/tun/linux/client/tunsetup.hpp: removed remove_cmds->execute(os) call in establish which prevented reconnection to work properly
-- [ProMIND] [2019/09/10] openvpn/tun/linux/client/tunsetup.hpp: removed connected_gw member and related code which prevented reconnection to work properly
-- [ProMIND] [1019/10/10] openvpn/client/cliopthelper.hpp: added method getRemoteList(). Returns remoteList member with list of profile's remote entries
+- [ProMIND] [2019/09/10] openvpn/tun/linux/client/tunsetup.hpp: removed remove_cmds->execute(os) call in
+                         establish which prevented reconnection to work properly
+- [ProMIND] [2019/09/10] openvpn/tun/linux/client/tunsetup.hpp: removed connected_gw member and related code which
+                         prevented reconnection to work properly
+- [ProMIND] [1019/10/10] openvpn/client/cliopthelper.hpp: added method getRemoteList(). Returns remoteList member
+                         with list of profile's remote entries
 - [ProMIND] [2019/10/10] client/ovpncli.hpp: added RemoteEntry structure to reflect profile's remote entries
 - [ProMIND] [2019/10/10] client/ovpncli.hpp: added remoteList member
-- [ProMIND] [2019/10/10] client/ovpncli.cpp: OpenVPNClient::parse_config now assigns remoteList member with values of ParseClientConfig.getRemoteList()
+- [ProMIND] [2019/10/10] client/ovpncli.cpp: OpenVPNClient::parse_config now assigns remoteList member with values
+                         of ParseClientConfig.getRemoteList()
 
 
 *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
