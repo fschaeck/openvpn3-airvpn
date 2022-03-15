@@ -300,6 +300,7 @@ namespace openvpn {
       std::string vpn_gw6;
       std::string client_ip;
       std::string tun_name;
+      std::string cipher;
 
       virtual std::string render() const
       {
@@ -314,7 +315,8 @@ namespace openvpn {
 	out << ':' << server_port
 	    << " (" << server_ip << ") via " << client_ip << '/' << server_proto
 	    << " on " << tun_name << '/' << vpn_ip4 << '/' << vpn_ip6
-	    << " gw=[" << vpn_gw4 << '/' << vpn_gw6 << ']';
+	    << " gw=[" << vpn_gw4 << '/' << vpn_gw6 << ']'
+        << " cipher=" << cipher;
 	return out.str();
       }
     };

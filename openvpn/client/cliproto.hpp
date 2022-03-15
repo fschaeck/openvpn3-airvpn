@@ -798,6 +798,15 @@ namespace openvpn {
 	  {
 	    OPENVPN_LOG("exception parsing client-ip: " << e.what());
 	  }
+	try {
+	  ev->cipher = received_options.get("cipher", 1, 256);
+	  if (ev->cipher.empty())
+	    ev->cipher = "UNKNOWN";
+	}
+	catch (const std::exception& e)
+	  {
+	    OPENVPN_LOG("exception parsing cipher: " << e.what());
+	  }
 	ev->tun_name = tun->tun_name();
 	connected_ = std::move(ev);
       }

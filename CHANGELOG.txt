@@ -1,3 +1,14 @@
+Changelog 3.8.1 AirVPN - Release date: 15 March 2022 by ProMIND
+
+- [ProMIND] [2022/03/15] openvpn/client/clievent.hpp: added cipher member to struct Connected
+                         openvpn/client/cliproto.hpp: tun_connected() assigns received_options["cipher"] to ClientEvent::Connected::cipher
+                         client/ovpncli.hpp: added cipher member to struct ConnectionInfo
+                         client/ovpncli.cpp: get_connection_info() assigned ClientEvent::Connected::cipher to ConnectionInfo::cipher
+
+
+*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+
 Changelog 3.7.3 AirVPN - Release date: 8 March 2022 by ProMIND
 
 - [ProMIND] [2022/03/08] client/cliconnect.hpp: Error::N_PAUSE and Error::N_RECONNECT are not

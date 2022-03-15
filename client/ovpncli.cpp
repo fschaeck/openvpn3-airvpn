@@ -233,6 +233,7 @@ namespace openvpn {
 		ci.gw6 = c->vpn_gw6;
 		ci.clientIp = c->client_ip;
 		ci.tunName = c->tun_name;
+        ci.cipher = c->cipher;
 		ci.defined = true;
 		return;
 	      }
