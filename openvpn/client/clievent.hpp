@@ -300,7 +300,10 @@ namespace openvpn {
       std::string vpn_gw6;
       std::string client_ip;
       std::string tun_name;
+      std::string topology;
       std::string cipher;
+      int ping;
+      int ping_restart;
 
       virtual std::string render() const
       {

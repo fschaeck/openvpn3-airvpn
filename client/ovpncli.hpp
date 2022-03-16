@@ -393,7 +393,11 @@ namespace openvpn {
       std::string gw6;
       std::string clientIp;
       std::string tunName;
+      std::string topology;
       std::string cipher;
+      int ping;
+      int ping_restart;
+
     };
 
     // returned by some methods as a status/error indication

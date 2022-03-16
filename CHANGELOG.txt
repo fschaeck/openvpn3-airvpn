@@ -1,9 +1,9 @@
-Changelog 3.8.1 AirVPN - Release date: 15 March 2022 by ProMIND
+Changelog 3.8.1 AirVPN - Release date: 16 March 2022 by ProMIND
 
-- [ProMIND] [2022/03/15] openvpn/client/clievent.hpp: added cipher member to struct Connected
-                         openvpn/client/cliproto.hpp: tun_connected() assigns received_options["cipher"] to ClientEvent::Connected::cipher
-                         client/ovpncli.hpp: added cipher member to struct ConnectionInfo
-                         client/ovpncli.cpp: get_connection_info() assigned ClientEvent::Connected::cipher to ConnectionInfo::cipher
+- [ProMIND] [2022/03/16] openvpn/client/clievent.hpp: added topology, cipher, ping and ping_restart members to struct Connected
+                         openvpn/client/cliproto.hpp: tun_connected() assigns received_options topology, cipher, ping and ping_restart to corresponding ClientEvent::Connected members
+                         client/ovpncli.hpp: added topology, cipher, ping and ping_restart members to struct ConnectionInfo
+                         client/ovpncli.cpp: get_connection_info() assigned ClientEvent::Connected topology, cipher, ping and ping_restart to corresponding ConnectionInfo members
 
 
 *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
