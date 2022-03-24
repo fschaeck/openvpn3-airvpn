@@ -439,7 +439,7 @@ namespace openvpn {
 	std::string port_override;
 	Protocol proto_override;
     CryptoAlgs::Type cipher_override = CryptoAlgs::Type::NONE;
-	IP::Addr::Version proto_version_override;
+	IP::Addr::Version proto_version_override = IP::Addr::Version::UNSPEC;
 	TriStateSetting allowUnusedAddrFamilies;
 	int conn_timeout = 0;
 	unsigned int tcp_queue_limit = 64;
