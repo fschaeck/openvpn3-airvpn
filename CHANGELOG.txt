@@ -1,9 +1,35 @@
+Changelog 3.8.2 AirVPN - Release date: 30 March 2022 by ProMIND
+
+- [ProMIND] [2022/03/30] openvpn/error/error.hpp: added BAD_DC_CIPHER_ERROR and
+                         BAD_DC_DIGEST_ERROR types.
+
+- [ProMIND] [2022/03/30] openvpn/client/cliconnect.hpp: client_proto_terminate() added
+                         management for BAD_DC_CIPHER_ERROR and BAD_DC_DIGEST_ERROR error
+                         types.
+
+- [ProMIND] [2022/03/30] openvpn/crypto/cryptoalgs.hpp: functions legal_dc_cipher(),
+                         legal_dc_digest(), dc_cbc_cipher() and dc_cbc_hash() now throw
+                         a fatal ErrorCode exception.
+
+
+*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+
 Changelog 3.8.1 AirVPN - Release date: 16 March 2022 by ProMIND
 
-- [ProMIND] [2022/03/16] openvpn/client/clievent.hpp: added topology, cipher, ping and ping_restart members to struct Connected
-                         openvpn/client/cliproto.hpp: tun_connected() assigns received_options topology, cipher, ping and ping_restart to corresponding ClientEvent::Connected members
-                         client/ovpncli.hpp: added topology, cipher, ping and ping_restart members to struct ConnectionInfo
-                         client/ovpncli.cpp: get_connection_info() assigned ClientEvent::Connected topology, cipher, ping and ping_restart to corresponding ConnectionInfo members
+- [ProMIND] [2022/03/16] openvpn/client/clievent.hpp: added topology, cipher, ping and
+                         ping_restart members to struct Connected.
+
+- [ProMIND] [2022/03/16] openvpn/client/cliproto.hpp: tun_connected() assigns
+                         received_options topology, cipher, ping and ping_restart
+                         to corresponding ClientEvent::Connected members.
+
+- [ProMIND] [2022/03/16] client/ovpncli.hpp: added topology, cipher, ping and
+                         ping_restart members to struct ConnectionInfo.
+
+- [ProMIND] [2022/03/16] client/ovpncli.cpp: get_connection_info() assigned
+                         ClientEvent::Connected topology, cipher, ping and ping_restart
+                         to corresponding ConnectionInfo members.
 
 
 *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
