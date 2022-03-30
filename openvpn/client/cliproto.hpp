@@ -587,6 +587,9 @@ namespace openvpn {
 		    return;
 		  }
 
+		// Merge local and pushed options
+		received_options.finalize(pushed_options_merger);
+
 		// process "echo" directives
 		if (echo)
 		  process_echo(received_options);
@@ -796,6 +799,42 @@ namespace openvpn {
 	    OPENVPN_LOG("exception parsing client-ip: " << e.what());
 	  }
 	ev->tun_name = tun->tun_name();
+	try {
+	  ev->topology = received_options.get_optional("topology", 1, 256);
+	  if (ev->topology.empty())
+	    ev->topology = "UNKNOWN";
+	}
+	catch (const std::exception& e)
+	  {
+	    OPENVPN_LOG("exception parsing topology: " << e.what());
+	  }
+	try {
+	  ev->cipher = received_options.get_optional("cipher", 1, 256);
+	  if (ev->cipher.empty())
+	    ev->cipher = "UNKNOWN";
+	}
+	catch (const std::exception& e)
+	  {
+	    OPENVPN_LOG("exception parsing cipher: " << e.what());
+	  }
+	try {
+	  ev->ping = std::stoi(received_options.get_optional("ping", 1, 256));
+	  if (ev->ping <= 0)
+	    ev->ping = -1;
+	}
+	catch (const std::exception& e)
+	  {
+	    OPENVPN_LOG("exception parsing ping: " << e.what());
+	  }
+	try {
+	  ev->ping_restart = std::stoi(received_options.get_optional("ping-restart", 1, 256));
+	  if (ev->ping_restart <= 0)
+	    ev->ping_restart = -1;
+	}
+	catch (const std::exception& e)
+	  {
+	    OPENVPN_LOG("exception parsing ping-restart: " << e.what());
+	  }
 	connected_ = std::move(ev);
       }
 
@@ -1211,6 +1250,7 @@ namespace openvpn {
 
       OptionList::Limits pushed_options_limit;
       OptionList::FilterBase::Ptr pushed_options_filter;
+      PushOptionsMerger::Ptr pushed_options_merger;
 
       AsioTimer inactive_timer;
       Time::Duration inactive_duration;

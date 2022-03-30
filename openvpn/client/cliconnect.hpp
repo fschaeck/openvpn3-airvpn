@@ -194,7 +194,7 @@ namespace openvpn {
 	  asio_work.reset(new AsioWork(io_context));
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Pause(reason);
 	  client_options->events().add_event(std::move(ev));
-	  client_options->stats().error(Error::N_PAUSE);
+	  // client_options->stats().error(Error::N_PAUSE);
 	}
     }
 
@@ -632,7 +632,7 @@ namespace openvpn {
 	{
 	  ClientEvent::Base::Ptr ev = new ClientEvent::Reconnecting();
 	  client_options->events().add_event(std::move(ev));
-	  client_options->stats().error(Error::N_RECONNECT);
+	  // client_options->stats().error(Error::N_RECONNECT);
 	  if (!(client && client->reached_connected_state()))
 	    client_options->next();
 	}
