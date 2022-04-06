@@ -8,7 +8,7 @@ env:
     - PREFIX="${HOME}/opt"
     - ASIO_VERSION="90f32660cd503494b3707840cfbd5434d8e9dabe"
     - LZ4_VERSION="1.8.3"
-    - MBEDTLS_VERSION="2.7.5"
+    - MBEDTLS_VERSION="2.16.6"
     - MBEDTLS_CFLAGS="-I${PREFIX}/include"
     - MBEDTLS_LIBS="-lmbedtls -lmbedx509 -lmbedcrypto"
     - OPENSSL_VERSION="1.0.2s"
