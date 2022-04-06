@@ -10,3 +10,4 @@ build
 # Eclipse IDE files
 .project
 .cproject
+.settings/

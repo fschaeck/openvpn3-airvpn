@@ -269,7 +269,7 @@ namespace openvpn
       {
 #ifdef OPENVPN_ENABLE_ASSERT
                 if(!ctx)
-                    throw openssl_aead_error("uninitialized");
+                    throw openssl_gcm_error("uninitialized");
 #endif
             }
         };
