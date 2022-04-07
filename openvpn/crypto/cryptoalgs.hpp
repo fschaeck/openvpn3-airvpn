@@ -33,6 +33,8 @@
 #include <openvpn/common/likely.hpp>
 #include <openvpn/common/arraysize.hpp>
 #include <openvpn/crypto/definitions.hpp>
+#include <openvpn/error/error.hpp>
+#include <openvpn/error/excode.hpp>
 
 namespace openvpn {
   namespace CryptoAlgs {
@@ -257,32 +259,68 @@ namespace openvpn {
     inline Type legal_dc_cipher(const Type type)
     {
       const Alg& alg = get(type);
-      if (!alg.dc_cipher())
-	OPENVPN_THROW(crypto_alg, alg.name() << ": bad cipher for data channel use");
+
+      if(!alg.dc_cipher())
+      {
+          std::string msg;
+          
+          msg = alg.name();
+          msg += ": bad cipher for data channel use";
+
+          throw ErrorCode(Error::BAD_DC_CIPHER_ERROR, true, msg);
+      }
+
       return type;
     }
 
     inline Type legal_dc_digest(const Type type)
     {
       const Alg& alg = get(type);
-      if (!alg.dc_digest())
-	OPENVPN_THROW(crypto_alg, alg.name() << ": bad digest for data channel use");
+
+      if(!alg.dc_digest())
+      {
+          std::string msg;
+          
+          msg = alg.name();
+          msg += ": bad digest for data channel use";
+
+          throw ErrorCode(Error::BAD_DC_DIGEST_ERROR, true, msg);
+      }
+
       return type;
     }
 
     inline Type dc_cbc_cipher(const Type type)
     {
       const Alg& alg = get(type);
-      if (!(alg.flags() & CBC_HMAC))
-	OPENVPN_THROW(crypto_alg, alg.name() << ": bad cipher for data channel use");
+
+      if(!(alg.flags() & CBC_HMAC))
+      {
+          std::string msg;
+          
+          msg = alg.name();
+          msg += ": bad cipher for data channel use";
+
+          throw ErrorCode(Error::BAD_DC_CIPHER_ERROR, true, msg);
+      }
+
       return type;
     }
 
     inline Type dc_cbc_hash(const Type type)
     {
       const Alg& alg = get(type);
-      if (!(alg.flags() & F_DIGEST))
-	OPENVPN_THROW(crypto_alg, alg.name() << ": bad digest for data channel use");
+
+      if(!(alg.flags() & F_DIGEST))
+      {
+          std::string msg;
+          
+          msg = alg.name();
+          msg += ": bad digest for data channel use";
+
+          throw ErrorCode(Error::BAD_DC_DIGEST_ERROR, true, msg);
+      }
+
       return type;
     }
 

@@ -89,6 +89,8 @@ namespace openvpn {
       KEY_STATE_ERROR,     // Received packet didn't match expected key state
       PROXY_ERROR,         // HTTP proxy error
       PROXY_NEED_CREDS,    // HTTP proxy needs credentials
+      BAD_DC_CIPHER_ERROR, // Bad cipher algorhitm for data channel
+      BAD_DC_DIGEST_ERROR, // Bad digest algorhitm for data channel
 
       // key event errors
       KEV_NEGOTIATE_ERROR,
@@ -171,6 +173,8 @@ namespace openvpn {
 	"KEY_STATE_ERROR",
 	"PROXY_ERROR",
 	"PROXY_NEED_CREDS",
+    "BAD_DC_CIPHER_ERROR",
+    "BAD_DC_DIGEST_ERROR",
 	"KEV_NEGOTIATE_ERROR",
 	"KEV_PENDING_ERROR",
 	"N_KEV_EXPIRE",

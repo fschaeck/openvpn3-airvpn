@@ -606,6 +606,22 @@ namespace openvpn {
 		    stop();
 		  }
 		  break;
+		case Error::BAD_DC_CIPHER_ERROR:
+		  {
+		    ClientEvent::Base::Ptr ev = new ClientEvent::ClientSetup(client->fatal_reason(), "");
+		    client_options->events().add_event(std::move(ev));
+		    client_options->stats().error(Error::BAD_DC_CIPHER_ERROR);
+		    stop();
+		  }
+		  break;
+		case Error::BAD_DC_DIGEST_ERROR:
+		  {
+		    ClientEvent::Base::Ptr ev = new ClientEvent::ClientSetup(client->fatal_reason(), "");
+		    client_options->events().add_event(std::move(ev));
+		    client_options->stats().error(Error::BAD_DC_DIGEST_ERROR);
+		    stop();
+		  }
+		  break;
 		default:
 		  throw client_connect_unhandled_exception();
 		}
